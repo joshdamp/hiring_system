@@ -36,7 +36,7 @@ app.add_middleware(
         "https://your-custom-domain.com"  # Add custom domain if you have one
     ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -44,6 +44,21 @@ app.add_middleware(
 sheets_service = SheetsService()
 ai_service = HuggingFaceAIService()  # FREE AI Service!
 assessment_service = AssessmentService(sheets_service, ai_service)
+
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {
+        "message": "Automated Hiring System API", 
+        "version": "1.0.0",
+        "status": "running",
+        "endpoints": {
+            "health": "/api/health",
+            "users": "/api/users", 
+            "questions": "/api/questions/fixed",
+            "docs": "/docs"
+        }
+    }
 
 @app.get("/api/health")
 async def health_check():
@@ -54,9 +69,12 @@ async def health_check():
 async def create_user(user_data: UserCreate):
     """Create a new user and store in Google Sheets"""
     try:
+        print(f"Creating user with data: {user_data.dict()}")
         user_response = await assessment_service.create_user(user_data)
+        print(f"User created successfully: {user_response.userId}")
         return user_response
     except Exception as e:
+        print(f"Error creating user: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/questions/fixed")
@@ -156,6 +174,36 @@ async def calculate_match_score(request: MatchingRequest):
         return {"matchScore": match_score}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/test-sheets")
+async def test_sheets_connection():
+    """Test Google Sheets connection"""
+    try:
+        # Test if sheets service is working
+        test_data = {
+            "userId": "test-user-123",
+            "name": "Test User",
+            "email": "test@example.com",
+            "phone": "123-456-7890",
+            "experience": "3-5 years",
+            "position": "Software Engineer",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        result = await sheets_service.save_user_info(test_data)
+        
+        return {
+            "status": "success" if result else "mock",
+            "message": "Google Sheets connection tested",
+            "sheets_connected": sheets_service.spreadsheet is not None,
+            "test_data_saved": result
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e),
+            "sheets_connected": False
+        }
 
 # Error handlers
 @app.exception_handler(HTTPException)

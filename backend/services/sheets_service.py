@@ -72,10 +72,12 @@ class SheetsService:
             
         except Exception as e:
             print(f"Failed to initialize Google Sheets: {e}")
+            print("Falling back to mock service for development")
             self._create_mock_service()
     
     def _create_mock_service(self):
         """Create a mock service for development/testing"""
+        print("Using mock Google Sheets service")
         self.gc = None
         self.spreadsheet = None
 
@@ -85,8 +87,11 @@ class SheetsService:
             await self._rate_limit()
             
             if not self.spreadsheet:
+                print("Mock mode: Would save user data to Google Sheets")
+                print(f"User data: {user_data}")
                 return True
             
+            print(f"Saving user data to Google Sheets: {user_data}")
             worksheet = self.spreadsheet.worksheet("User_Info")
             
             row_data = [
