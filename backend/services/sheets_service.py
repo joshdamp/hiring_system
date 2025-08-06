@@ -69,11 +69,17 @@ class SheetsService:
             
             self.gc = gspread.authorize(creds)
             self.spreadsheet = self.gc.open_by_key(spreadsheet_id)
+            print(f"Successfully connected to Google Sheets: {spreadsheet_id}")
             
         except Exception as e:
-            print(f"Failed to initialize Google Sheets: {e}")
-            print("Falling back to mock service for development")
-            self._create_mock_service()
+            print(f"CRITICAL: Failed to initialize Google Sheets: {e}")
+            print("Environment variables check:")
+            print(f"GOOGLE_TYPE: {os.getenv('GOOGLE_TYPE')}")
+            print(f"GOOGLE_PROJECT_ID: {os.getenv('GOOGLE_PROJECT_ID')}")
+            print(f"GOOGLE_CLIENT_EMAIL: {os.getenv('GOOGLE_CLIENT_EMAIL')}")
+            print(f"GOOGLE_SHEET_ID: {spreadsheet_id}")
+            # Don't fall back to mock - raise the error
+            raise Exception(f"Google Sheets connection failed: {e}")
     
     def _create_mock_service(self):
         """Create a mock service for development/testing"""

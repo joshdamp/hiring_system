@@ -30,14 +30,14 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "http://localhost:3001",
         "http://127.0.0.1:3001",
-        "https://*.vercel.app",  # Vercel frontend
-        "https://*.onrender.com",  # Render frontend
-        "https://hiring-system-frontend.onrender.com",  # Your specific frontend
-        "https://your-custom-domain.com"  # Add custom domain if you have one
+        "https://hiring-system.onrender.com",  # Your actual frontend URL
+        "https://hiring-system-frontend.onrender.com",
+        "https://*.vercel.app",
+        "https://*.onrender.com"
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
+    allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"],
 )
 
 # Initialize services
@@ -76,6 +76,12 @@ async def create_user(user_data: UserCreate):
     except Exception as e:
         print(f"Error creating user: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# Also add endpoint without /api prefix for frontend compatibility
+@app.post("/users", response_model=UserResponse)
+async def create_user_alt(user_data: UserCreate):
+    """Create a new user and store in Google Sheets (alternative endpoint)"""
+    return await create_user(user_data)
 
 @app.get("/api/questions/fixed")
 async def get_fixed_questions():
