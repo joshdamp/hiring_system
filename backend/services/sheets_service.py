@@ -100,21 +100,27 @@ class SheetsService:
             print(f"Saving user data to Google Sheets: {user_data}")
             worksheet = self.spreadsheet.worksheet("User_Info")
             
+            # Map to your actual Google Sheets columns: UserID | Name | Age | Experience | Consent | Timestamp
             row_data = [
                 user_data.get('userId', ''),
                 user_data.get('name', ''),
-                user_data.get('email', ''),
-                user_data.get('phone', ''),
+                user_data.get('age', ''),
                 user_data.get('experience', ''),
-                user_data.get('position', ''),
+                user_data.get('consent', ''),
                 user_data.get('timestamp', '')
             ]
-            worksheet.append_row(row_data)
+            
+            print(f"Attempting to append row with correct column mapping: {row_data}")
+            result = worksheet.append_row(row_data)
+            print(f"Google Sheets append result: {result}")
             
             return True
             
         except Exception as e:
-            return False
+            print(f"ERROR saving to Google Sheets: {str(e)}")
+            print(f"Exception type: {type(e)}")
+            # Re-raise the exception so we know about failures
+            raise e
 
     async def get_fixed_questions(self) -> List[Dict[str, Any]]:
         """Get fixed questions from the spreadsheet"""

@@ -92,6 +92,22 @@ async def get_fixed_questions():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# Also add endpoint without /api prefix for frontend compatibility
+@app.get("/questions/fixed")
+async def get_fixed_questions_alt():
+    """Get all fixed psychometric questions (alternative endpoint)"""
+    return await get_fixed_questions()
+
+@app.post("/questions/follow-up/{round}")
+async def get_follow_up_questions_alt(round: int, user_data: UserCreate):
+    """Get follow-up questions (alternative endpoint)"""
+    return await get_follow_up_questions(round, user_data)
+
+@app.post("/responses/initial")
+async def submit_initial_responses_alt(request: InitialResponsesRequest):
+    """Submit initial responses (alternative endpoint)"""
+    return await submit_initial_responses(request)
+
 @app.post("/api/questions/follow-up/{round}")
 async def get_follow_up_questions(round: int, request: FollowUpQuestionsRequest):
     """Generate personalized follow-up questions based on previous responses"""
