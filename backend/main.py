@@ -28,8 +28,11 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000", 
         "http://127.0.0.1:3000",
-        "http://localhost:3001",  # Added for your current frontend port
-        "http://127.0.0.1:3001"
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
+        "https://*.vercel.app",  # Vercel frontend
+        "https://*.onrender.com",  # Render frontend
+        "https://your-frontend-name.onrender.com"  # Replace with actual domain
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -173,10 +176,11 @@ async def general_exception_handler(request, exc):
     )
 
 if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8000,
-        reload=True,
+        port=port,
+        reload=False,  # Disable reload in production
         log_level="info"
     )
