@@ -41,14 +41,38 @@ class SheetsService:
             credentials_path = os.getenv('GOOGLE_CREDENTIALS_PATH', 'credentials.json')
             spreadsheet_id = os.getenv('GOOGLE_SHEET_ID', '14eHVi6M0nkRf9u2SJ26FFqWp0dNYw05hsFcuCi5rty0')
             
-            if os.path.exists(credentials_path):
+            # Try environment variables first (for production)
+            if all([
+                os.getenv('GOOGLE_TYPE'),
+                os.getenv('GOOGLE_PROJECT_ID'),
+                os.getenv('GOOGLE_PRIVATE_KEY'),
+                os.getenv('GOOGLE_CLIENT_EMAIL')
+            ]):
+                # Create credentials from environment variables
+                credentials_info = {
+                    "type": os.getenv('GOOGLE_TYPE'),
+                    "project_id": os.getenv('GOOGLE_PROJECT_ID'),
+                    "private_key_id": os.getenv('GOOGLE_PRIVATE_KEY_ID'),
+                    "private_key": os.getenv('GOOGLE_PRIVATE_KEY').replace('\\n', '\n'),
+                    "client_email": os.getenv('GOOGLE_CLIENT_EMAIL'),
+                    "client_id": os.getenv('GOOGLE_CLIENT_ID'),
+                    "auth_uri": os.getenv('GOOGLE_AUTH_URI', 'https://accounts.google.com/o/oauth2/auth'),
+                    "token_uri": os.getenv('GOOGLE_TOKEN_URI', 'https://oauth2.googleapis.com/token'),
+                    "auth_provider_x509_cert_url": os.getenv('GOOGLE_AUTH_PROVIDER_X509_CERT_URL', 'https://www.googleapis.com/oauth2/v1/certs'),
+                    "client_x509_cert_url": os.getenv('GOOGLE_CLIENT_X509_CERT_URL')
+                }
+                creds = Credentials.from_service_account_info(credentials_info, scopes=scope)
+            elif os.path.exists(credentials_path):
+                # Fallback to credentials file for local development
                 creds = Credentials.from_service_account_file(credentials_path, scopes=scope)
-                self.gc = gspread.authorize(creds)
-                self.spreadsheet = self.gc.open_by_key(spreadsheet_id)
             else:
-                raise Exception("credentials.json not found")
+                raise Exception("No Google credentials found")
+            
+            self.gc = gspread.authorize(creds)
+            self.spreadsheet = self.gc.open_by_key(spreadsheet_id)
             
         except Exception as e:
+            print(f"Failed to initialize Google Sheets: {e}")
             self._create_mock_service()
     
     def _create_mock_service(self):
