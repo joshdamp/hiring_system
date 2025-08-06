@@ -22,7 +22,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS middleware
+# CORS middleware  
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -32,7 +32,8 @@ app.add_middleware(
         "http://127.0.0.1:3001",
         "https://*.vercel.app",  # Vercel frontend
         "https://*.onrender.com",  # Render frontend
-        "https://hiring-system-frontend.onrender.com"  # Your actual frontend URL
+        "https://hiring-system-frontend.onrender.com",  # Your specific frontend
+        "https://your-custom-domain.com"  # Add custom domain if you have one
     ],
     allow_credentials=True,
     allow_methods=["*"],

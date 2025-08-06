@@ -37,8 +37,9 @@ class SheetsService:
                 "https://www.googleapis.com/auth/drive"
             ]
             
-            credentials_path = "credentials.json"
-            spreadsheet_id = "14eHVi6M0nkRf9u2SJ26FFqWp0dNYw05hsFcuCi5rty0"
+            # Use environment variables with fallbacks
+            credentials_path = os.getenv('GOOGLE_CREDENTIALS_PATH', 'credentials.json')
+            spreadsheet_id = os.getenv('GOOGLE_SHEET_ID', '14eHVi6M0nkRf9u2SJ26FFqWp0dNYw05hsFcuCi5rty0')
             
             if os.path.exists(credentials_path):
                 creds = Credentials.from_service_account_file(credentials_path, scopes=scope)
