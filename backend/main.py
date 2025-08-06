@@ -32,7 +32,7 @@ app.add_middleware(
         "http://127.0.0.1:3001",
         "https://*.vercel.app",  # Vercel frontend
         "https://*.onrender.com",  # Render frontend
-        "https://your-frontend-name.onrender.com"  # Replace with actual domain
+        "https://hiring-system-frontend.onrender.com"  # Your actual frontend URL
     ],
     allow_credentials=True,
     allow_methods=["*"],
