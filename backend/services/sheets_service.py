@@ -88,7 +88,7 @@ class SheetsService:
         self.spreadsheet = None
 
     async def save_user_info(self, user_data: Dict[str, Any]) -> bool:
-        """Save user information to User_Info sheet"""
+        """Save user information to the first available sheet"""
         try:
             await self._rate_limit()
             
@@ -98,7 +98,28 @@ class SheetsService:
                 return True
             
             print(f"Saving user data to Google Sheets: {user_data}")
-            worksheet = self.spreadsheet.worksheet("User_Info")
+            
+            # Try different possible worksheet names
+            worksheet = None
+            possible_names = ["User_Profiles", "User_Info", "Sheet1", "Users", "UserData"]
+            
+            for sheet_name in possible_names:
+                try:
+                    worksheet = self.spreadsheet.worksheet(sheet_name)
+                    print(f"Found worksheet: {sheet_name}")
+                    break
+                except Exception as e:
+                    print(f"Worksheet '{sheet_name}' not found: {e}")
+                    continue
+            
+            if not worksheet:
+                # Get the first available worksheet
+                worksheets = self.spreadsheet.worksheets()
+                if worksheets:
+                    worksheet = worksheets[0]
+                    print(f"Using first available worksheet: {worksheet.title}")
+                else:
+                    raise Exception("No worksheets found in spreadsheet")
             
             # Map to your actual Google Sheets columns: UserID | Name | Age | Experience | Consent | Timestamp
             row_data = [

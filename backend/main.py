@@ -205,12 +205,19 @@ async def test_sheets_connection():
         test_data = {
             "userId": "test-user-123",
             "name": "Test User",
-            "email": "test@example.com",
-            "phone": "123-456-7890",
-            "experience": "3-5 years",
-            "position": "Software Engineer",
+            "age": 25,
+            "experience": 3,
+            "consent": True,
             "timestamp": datetime.now().isoformat()
         }
+        
+        # List available worksheets
+        worksheets = []
+        if sheets_service.spreadsheet:
+            try:
+                worksheets = [ws.title for ws in sheets_service.spreadsheet.worksheets()]
+            except Exception as e:
+                worksheets = [f"Error getting worksheets: {e}"]
         
         result = await sheets_service.save_user_info(test_data)
         
@@ -218,6 +225,7 @@ async def test_sheets_connection():
             "status": "success" if result else "mock",
             "message": "Google Sheets connection tested",
             "sheets_connected": sheets_service.spreadsheet is not None,
+            "available_worksheets": worksheets,
             "test_data_saved": result
         }
     except Exception as e:

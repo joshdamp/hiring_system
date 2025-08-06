@@ -19,15 +19,12 @@ class AssessmentService:
             # Generate unique user ID
             user_id = f"U{datetime.now().strftime('%Y%m%d%H%M%S')}"
             
-            # Prepare user data for saving
+            # Prepare user data for saving (only fields that exist in Google Sheets)
             user_dict = {
                 'userId': user_id,
                 'name': user_data.name,
-                'email': getattr(user_data, 'email', ''),  # Handle missing email field
-                'phone': getattr(user_data, 'phone', ''),  # Handle missing phone field
                 'age': user_data.age,
                 'experience': user_data.experience,
-                'position': getattr(user_data, 'position', ''),  # Handle missing position field
                 'consent': user_data.consent,
                 'timestamp': datetime.now().isoformat()
             }
