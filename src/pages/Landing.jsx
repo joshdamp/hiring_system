@@ -110,50 +110,6 @@ function Landing() {
               Discover your unique professional profile through our advanced
               psychometric assessment powered by artificial intelligence.
             </Typography>
-            <Box sx={{ mb: 4 }}>
-              <Chip
-                label="✨ AI-Powered"
-                sx={{ 
-                  mr: 1, 
-                  mb: 1,
-                  background: 'linear-gradient(135deg, #d4af37 0%, #b8941f 100%)',
-                  color: '#0a0a0a',
-                  fontWeight: 600,
-                }}
-              />
-              <Chip
-                label="🔒 Secure"
-                sx={{ 
-                  mr: 1, 
-                  mb: 1,
-                  background: 'transparent',
-                  border: '2px solid #d4af37',
-                  color: '#d4af37',
-                  fontWeight: 500,
-                }}
-              />
-              <Chip
-                label="⚡ Fast"
-                sx={{ 
-                  mr: 1, 
-                  mb: 1,
-                  background: 'linear-gradient(135deg, #d4af37 0%, #b8941f 100%)',
-                  color: '#0a0a0a',
-                  fontWeight: 600,
-                }}
-              />
-              <Chip
-                label="📊 Accurate"
-                sx={{ 
-                  mr: 1, 
-                  mb: 1,
-                  background: 'transparent',
-                  border: '2px solid #d4af37',
-                  color: '#d4af37',
-                  fontWeight: 500,
-                }}
-              />
-            </Box>
             <Button
               variant="contained"
               size="large"
@@ -166,7 +122,7 @@ function Landing() {
                 fontWeight: 600,
                 borderRadius: 3,
                 background: 'linear-gradient(135deg, #d4af37 0%, #b8941f 100%)',
-                color: '#0a0a0a',
+                color: 'black',
                 textTransform: 'uppercase',
                 letterSpacing: '0.5px',
                 '&:hover': {
@@ -267,9 +223,9 @@ function Landing() {
               p: 4,
               mb: 6,
               borderRadius: 3,
-              background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
+              background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.05) 0%, rgba(244, 228, 161, 0.05) 100%)',
               border: '1px solid',
-              borderColor: 'primary.light',
+              borderColor: '#d4af37',
             }}
           >
             <Typography
@@ -284,7 +240,7 @@ function Landing() {
             <Grid container spacing={3}>
               <Grid item xs={12} sm={6} md={3}>
                 <Box textAlign="center">
-                  <Typography variant="h6" color="primary" gutterBottom>
+                  <Typography variant="h6" sx={{ color: '#d4af37' }} gutterBottom>
                     Step 1
                   </Typography>
                   <Typography variant="body2">
@@ -294,7 +250,7 @@ function Landing() {
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
                 <Box textAlign="center">
-                  <Typography variant="h6" color="primary" gutterBottom>
+                  <Typography variant="h6" sx={{ color: '#d4af37' }} gutterBottom>
                     Step 2
                   </Typography>
                   <Typography variant="body2">
@@ -304,7 +260,7 @@ function Landing() {
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
                 <Box textAlign="center">
-                  <Typography variant="h6" color="primary" gutterBottom>
+                  <Typography variant="h6" sx={{ color: '#d4af37' }} gutterBottom>
                     Step 3
                   </Typography>
                   <Typography variant="body2">
@@ -314,7 +270,7 @@ function Landing() {
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
                 <Box textAlign="center">
-                  <Typography variant="h6" color="primary" gutterBottom>
+                  <Typography variant="h6" sx={{ color: '#d4af37' }} gutterBottom>
                     Step 4
                   </Typography>
                   <Typography variant="body2">
@@ -324,47 +280,6 @@ function Landing() {
               </Grid>
             </Grid>
           </Card>
-        </motion.div>
-
-        {/* Call to Action */}
-        <motion.div variants={itemVariants}>
-          <Box
-            textAlign="center"
-            sx={{
-              py: 6,
-              px: 3,
-              borderRadius: 3,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: 'white',
-            }}
-          >
-            <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
-              Ready to Discover Your Professional Profile?
-            </Typography>
-            <Typography variant="h6" sx={{ mb: 4, opacity: 0.9 }}>
-              Join thousands of professionals who have unlocked their potential
-            </Typography>
-            <Button
-              variant="contained"
-              size="large"
-              onClick={() => navigate('/user-info')}
-              sx={{
-                py: 2,
-                px: 4,
-                fontSize: '1.1rem',
-                fontWeight: 600,
-                borderRadius: 3,
-                backgroundColor: 'white',
-                color: 'primary.main',
-                '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                  transform: 'translateY(-2px)',
-                },
-              }}
-            >
-              Begin Assessment Now
-            </Button>
-          </Box>
         </motion.div>
       </motion.div>
     </Container>

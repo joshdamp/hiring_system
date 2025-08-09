@@ -29,6 +29,8 @@ function FollowUpQuestions({ round = 1 }) {
   const [questions, setQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [responses, setResponses] = useState({});
+  const [firstChoices, setFirstChoices] = useState({});  // For Chapter 2 dual selection
+  const [secondChoices, setSecondChoices] = useState({}); // For Chapter 2 dual selection
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -59,6 +61,7 @@ function FollowUpQuestions({ round = 1 }) {
       }
       
       const questionsData = await apiService.getFollowUpQuestions(state.userInfo.userId, round);
+      console.log('Follow-up questions data:', questionsData);
       setQuestions(questionsData);
       actions.setQuestions(`followUp${round}`, questionsData);
     } catch (error) {
@@ -79,6 +82,49 @@ function FollowUpQuestions({ round = 1 }) {
     }));
   };
 
+  const handleChoiceSelect = (choice) => {
+    const questionId = questions[currentQuestionIndex].QuestionID;
+    
+    console.log('DEBUG: Choice select:', { choice, questionId });
+    
+    if (round === 1) {
+      // Chapter 2: Dual selection logic
+      const currentFirst = firstChoices[questionId];
+      const currentSecond = secondChoices[questionId];
+      
+      console.log('DEBUG: Current choices:', { currentFirst, currentSecond });
+      
+      if (!currentFirst) {
+        // Select first choice
+        console.log('DEBUG: Setting first choice:', choice);
+        setFirstChoices(prev => ({ ...prev, [questionId]: choice }));
+      } else if (!currentSecond && choice !== currentFirst) {
+        // Select second choice (different from first)
+        console.log('DEBUG: Setting second choice:', choice);
+        setSecondChoices(prev => ({ ...prev, [questionId]: choice }));
+      } else if (choice === currentFirst) {
+        // Clicking first choice again - clear it and move second to first
+        console.log('DEBUG: Clearing first choice');
+        setFirstChoices(prev => ({ ...prev, [questionId]: currentSecond || null }));
+        setSecondChoices(prev => ({ ...prev, [questionId]: null }));
+      } else if (choice === currentSecond) {
+        // Clicking second choice again - clear it
+        console.log('DEBUG: Clearing second choice');
+        setSecondChoices(prev => ({ ...prev, [questionId]: null }));
+      } else {
+        // Selecting a third option - replace second choice
+        console.log('DEBUG: Replacing second choice:', choice);
+        setSecondChoices(prev => ({ ...prev, [questionId]: choice }));
+      }
+    } else {
+      // Chapter 3: Single selection (existing logic)
+      setResponses(prev => ({
+        ...prev,
+        [questionId]: choice,
+      }));
+    }
+  };
+
   const handleNext = () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
@@ -96,11 +142,34 @@ function FollowUpQuestions({ round = 1 }) {
       setSubmitting(true);
       
       // Format responses for API
-      const formattedResponses = Object.entries(responses).map(([questionId, response]) => ({
-        questionId,
-        response,
-        timestamp: new Date().toISOString(),
-      }));
+      let formattedResponses;
+      
+      if (round === 1) {
+        // Chapter 2: Format dual-choice responses
+        formattedResponses = questions.map(q => {
+          const firstChoice = firstChoices[q.QuestionID];
+          const secondChoice = secondChoices[q.QuestionID];
+          
+          // Validate that both choices are made
+          if (!firstChoice || !secondChoice) {
+            throw new Error(`Please select both choices for question: ${q.Prompt}`);
+          }
+          
+          return {
+            questionId: q.QuestionID,
+            firstChoice,
+            secondChoice,
+            timestamp: new Date().toISOString(),
+          };
+        });
+      } else {
+        // Chapter 3: Regular text responses
+        formattedResponses = Object.entries(responses).map(([questionId, response]) => ({
+          questionId,
+          response,
+          timestamp: new Date().toISOString(),
+        }));
+      }
       
       // Submit responses to backend
       await apiService.submitFollowUpResponses(
@@ -136,8 +205,29 @@ function FollowUpQuestions({ round = 1 }) {
 
   const progress = questions.length > 0 ? ((currentQuestionIndex + 1) / questions.length) * 100 : 0;
   const currentQuestion = questions[currentQuestionIndex];
-  const currentResponse = currentQuestion ? (responses[currentQuestion.QuestionID] || '') : '';
-  const allQuestionsAnswered = questions.length > 0 && questions.every(q => responses[q.QuestionID]?.trim());
+  
+  // Get current responses based on round
+  let currentResponse;
+  if (round === 1) {
+    // Chapter 2: Use firstChoices and secondChoices
+    currentResponse = {
+      firstChoice: firstChoices[currentQuestion?.QuestionID],
+      secondChoice: secondChoices[currentQuestion?.QuestionID]
+    };
+  } else {
+    // Chapter 3: Use regular responses
+    currentResponse = currentQuestion ? (responses[currentQuestion.QuestionID] || '') : '';
+  }
+  const allQuestionsAnswered = questions.length > 0 && questions.every(q => {
+    if (round === 1) {
+      // Chapter 2: Check if both choices are selected
+      const firstChoice = firstChoices[q.QuestionID];
+      const secondChoice = secondChoices[q.QuestionID];
+      return firstChoice && secondChoice && firstChoice !== secondChoice;
+    }
+    // Chapter 3: Regular text response
+    return responses[q.QuestionID]?.trim();
+  });
 
   if (loading) {
     return <LoadingPage message={`Generating personalized questions for round ${round}...`} />;
@@ -215,10 +305,6 @@ function FollowUpQuestions({ round = 1 }) {
                 color="primary"
                 variant="outlined"
               />
-              <Chip
-                label={`${Math.round(progress)}% Complete`}
-                color="primary"
-              />
             </Box>
           </Box>
           
@@ -250,7 +336,19 @@ function FollowUpQuestions({ round = 1 }) {
 
       {/* Question Card */}
       <AnimatePresence mode="wait">
-        {currentQuestion && (
+        {loading ? (
+          <Card sx={{ p: 4, borderRadius: 3, textAlign: 'center' }}>
+            <CircularProgress size={60} />
+            <Typography variant="h6" sx={{ mt: 2 }}>Loading questions...</Typography>
+          </Card>
+        ) : questions.length === 0 ? (
+          <Card sx={{ p: 4, borderRadius: 3, textAlign: 'center' }}>
+            <Typography variant="h6" color="error">No questions available</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Please try refreshing the page or contact support if this persists.
+            </Typography>
+          </Card>
+        ) : currentQuestion ? (
           <motion.div
             key={currentQuestionIndex}
             variants={cardVariants}
@@ -266,37 +364,148 @@ function FollowUpQuestions({ round = 1 }) {
                     sx={{ fontSize: 24, color: 'primary.main', mr: 2, mt: 1 }} 
                   />
                   <Typography variant="h6" sx={{ flex: 1, fontWeight: 500 }}>
-                    {currentQuestion.QuestionText}
+                    {currentQuestion.Prompt || currentQuestion.QuestionText || 'Question text not available'}
                   </Typography>
                 </Box>
 
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={4}
-                  value={currentResponse}
-                  onChange={handleResponseChange}
-                  placeholder="Please provide a detailed response..."
-                  variant="outlined"
-                  sx={{
-                    mb: 4,
-                    '& .MuiOutlinedInput-root': {
+                {/* Render different input types based on question type */}
+                {currentQuestion.Type === 'multiple_choice' ? (
+                  // Chapter 2: Multiple choice options
+                  <Box sx={{ mb: 4 }}>
+                    {[currentQuestion.Option1, currentQuestion.Option2, currentQuestion.Option3, currentQuestion.Option4]
+                      .filter(option => option) // Remove empty options
+                      .map((option, index) => {
+                      const choice = String.fromCharCode(65 + index); // A, B, C, D
+                      let isFirstChoice = false;
+                      let isSecondChoice = false;
+                      let isSelected = false;
+                      
+                      if (round === 1) {
+                        // Chapter 2: Dual selection - compare with choice letters
+                        isFirstChoice = currentResponse.firstChoice === choice;
+                        isSecondChoice = currentResponse.secondChoice === choice;
+                        isSelected = isFirstChoice || isSecondChoice;
+                      } else {
+                        // Chapter 3: Single selection - compare with choice letters
+                        isSelected = currentResponse === choice;
+                      }
+                      
+                      return (
+                        <Card 
+                          key={choice}
+                          sx={{ 
+                            mb: 2, 
+                            cursor: 'pointer',
+                            border: isSelected ? '2px solid' : '2px solid',
+                            borderColor: isSelected ? (isFirstChoice ? 'success.main' : 'primary.main') : '#DAA520',
+                            backgroundColor: isSelected ? (isFirstChoice ? 'success.50' : 'primary.50') : 'rgba(26, 35, 126, 0.02)',
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                              borderColor: isSelected ? (isFirstChoice ? 'success.main' : 'primary.main') : '#DAA520',
+                              backgroundColor: isSelected ? (isFirstChoice ? 'success.100' : 'primary.100') : 'rgba(26, 35, 126, 0.05)',
+                            }
+                          }}
+                          onClick={() => handleChoiceSelect(choice)}
+                        >
+                          <CardContent sx={{ py: 2 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <Typography 
+                                  variant="h6" 
+                                  sx={{ 
+                                    minWidth: 30,
+                                    color: isSelected ? (isFirstChoice ? 'success.main' : 'primary.main') : 'text.secondary',
+                                    fontWeight: isSelected ? 600 : 400
+                                  }}
+                                >
+                                  {choice}.
+                                </Typography>
+                                <Typography 
+                                  variant="body1" 
+                                  sx={{ 
+                                    ml: 2,
+                                    color: isSelected ? (isFirstChoice ? 'success.dark' : 'primary.dark') : 'text.primary',
+                                    fontWeight: isSelected ? 500 : 400
+                                  }}
+                                >
+                                  {option}
+                                </Typography>
+                              </Box>
+                              {round === 1 && isSelected && (
+                                <Chip
+                                  label={isFirstChoice ? "1st Choice" : "2nd Choice"}
+                                  color={isFirstChoice ? "success" : "primary"}
+                                  size="small"
+                                  variant="filled"
+                                />
+                              )}
+                            </Box>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                    
+                    {round === 1 && (
+                      <Box sx={{ 
+                        backgroundColor: 'info.50', 
+                        p: 2, 
+                        borderRadius: 2,
+                        mt: 3,
+                        border: '1px solid',
+                        borderColor: 'info.200'
+                      }}>
+                        <Typography variant="body2" sx={{ color: '#333333', fontWeight: 500 }}>
+                          � <strong>Instructions:</strong> Select TWO choices - your FIRST most likely reaction, then your SECOND most likely reaction. This reveals which strengths you naturally use in real situations.
+                        </Typography>
+                      </Box>
+                    )}
+                    
+                    <Box sx={{ 
+                      backgroundColor: 'grey.50', 
+                      p: 2, 
                       borderRadius: 2,
-                    },
-                  }}
-                />
+                      mt: 3,
+                    }}>
+                      <Typography variant="body2" sx={{ color: '#333333' }}>
+                        💡 <strong>Chapter {round + 1}:</strong> {round === 1 ? 
+                          'Focus on your natural instincts - what would you actually do first, then second?' : 
+                          'Provide specific examples and detailed explanations. The more thoughtful your response, the more accurate your final profile will be.'
+                        }
+                      </Typography>
+                    </Box>
+                  </Box>
+                ) : (
+                  // Chapter 3: Open-ended text response
+                  <>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={4}
+                      value={currentResponse}
+                      onChange={handleResponseChange}
+                      placeholder="Please provide a detailed response..."
+                      variant="outlined"
+                      sx={{
+                        mb: 4,
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                        },
+                      }}
+                    />
 
-                <Box sx={{ 
-                  backgroundColor: 'grey.50', 
-                  p: 2, 
-                  borderRadius: 2,
-                  mb: 4,
-                }}>
-                  <Typography variant="body2" color="text.secondary">
-                    💡 <strong>Tip:</strong> Provide specific examples and detailed explanations. 
-                    The more thoughtful your response, the more accurate your final profile will be.
-                  </Typography>
-                </Box>
+                    <Box sx={{ 
+                      backgroundColor: 'grey.50', 
+                      p: 2, 
+                      borderRadius: 2,
+                      mb: 4,
+                    }}>
+                      <Typography variant="body2" sx={{ color: '#333333' }}>
+                        💡 <strong>Chapter {round + 1}:</strong> Provide specific examples and detailed explanations. 
+                        The more thoughtful your response, the more accurate your final profile will be.
+                      </Typography>
+                    </Box>
+                  </>
+                )}
 
                 {/* Navigation Buttons */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -314,7 +523,13 @@ function FollowUpQuestions({ round = 1 }) {
                       <Button
                         variant="contained"
                         onClick={handleNext}
-                        disabled={!currentResponse || !currentResponse.trim()}
+                        disabled={
+                          round === 1 
+                            ? !currentResponse.firstChoice || !currentResponse.secondChoice
+                            : currentQuestion?.Type === 'open_ended' 
+                              ? !currentResponse || !currentResponse.trim()
+                              : !currentResponse
+                        }
                         sx={{
                           px: 3,
                           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -345,6 +560,13 @@ function FollowUpQuestions({ round = 1 }) {
               </CardContent>
             </Card>
           </motion.div>
+        ) : (
+          <Card sx={{ p: 4, borderRadius: 3, textAlign: 'center' }}>
+            <Typography variant="h6" color="warning.main">Question not found</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Current question index: {currentQuestionIndex}, Total questions: {questions.length}
+            </Typography>
+          </Card>
         )}
       </AnimatePresence>
 
@@ -355,23 +577,32 @@ function FollowUpQuestions({ round = 1 }) {
             Question Progress
           </Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            {questions.map((_, index) => (
-              <Button
-                key={index}
-                size="small"
-                variant={index === currentQuestionIndex ? 'contained' : 'outlined'}
-                color={responses[questions[index]?.QuestionID]?.trim() ? 'success' : 'primary'}
-                onClick={() => setCurrentQuestionIndex(index)}
-                sx={{
-                  minWidth: 36,
-                  width: 36,
-                  height: 36,
-                  p: 0,
-                }}
-              >
-                {index + 1}
-              </Button>
-            ))}
+            {questions.map((question, index) => {
+              const response = responses[question?.QuestionID];
+              const isAnswered = response && (
+                question?.QuestionType === 'chapter_2_situational' 
+                  ? response.trim() 
+                  : response.trim()
+              );
+              
+              return (
+                <Button
+                  key={index}
+                  size="small"
+                  variant={index === currentQuestionIndex ? 'contained' : 'outlined'}
+                  color={isAnswered ? 'success' : 'primary'}
+                  onClick={() => setCurrentQuestionIndex(index)}
+                  sx={{
+                    minWidth: 36,
+                    width: 36,
+                    height: 36,
+                    p: 0,
+                  }}
+                >
+                  {index + 1}
+                </Button>
+              );
+            })}
           </Box>
         </CardContent>
       </Card>

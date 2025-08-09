@@ -21,38 +21,14 @@ function LoadingPage({ message = "Processing your assessment..." }) {
         animate={{ rotate: 360 }}
         transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
       >
-        <CircularProgress 
-          size={60} 
-          thickness={4}
-          sx={{
-            color: '#d4af37',
-            '& .MuiCircularProgress-circle': {
-              strokeLinecap: 'round',
-            },
-          }}
-        />
+        <CircularProgress size={60} thickness={4} />
       </motion.div>
       
-      <Box textAlign="center" className="modern-card" sx={{ p: 4, maxWidth: 400 }}>
-        <Typography 
-          variant="h6" 
-          gutterBottom
-          sx={{ 
-            color: '#ffffff',
-            fontWeight: 600,
-            mb: 2,
-          }}
-        >
+      <Box textAlign="center">
+        <Typography variant="h6" color="text.primary" gutterBottom>
           {message}
         </Typography>
-        <Typography 
-          variant="body2" 
-          sx={{ 
-            color: 'rgba(255, 255, 255, 0.7)',
-            fontSize: '1rem',
-            lineHeight: 1.6,
-          }}
-        >
+        <Typography variant="body2" color="text.secondary">
           This will only take a moment...
         </Typography>
       </Box>

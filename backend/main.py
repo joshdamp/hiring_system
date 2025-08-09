@@ -6,13 +6,14 @@ from datetime import datetime
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from both backend/.env and root .env
+load_dotenv()  # Load from backend/.env first
+load_dotenv('../.env')  # Then load from root .env (will not override existing vars)
 
 # Import our modules
 from models.schemas import *
 from services.sheets_service import SheetsService
-from services.huggingface_ai_service import HuggingFaceAIService
+from services.groq_ai_service import GroqAIService
 from services.assessment_service import AssessmentService
 
 # Initialize FastAPI app
@@ -42,7 +43,7 @@ app.add_middleware(
 
 # Initialize services
 sheets_service = SheetsService()
-ai_service = HuggingFaceAIService()  # FREE AI Service!
+ai_service = GroqAIService()  # FREE AI Service!
 assessment_service = AssessmentService(sheets_service, ai_service)
 
 @app.get("/")
@@ -137,14 +138,22 @@ async def submit_initial_responses(request: InitialResponsesRequest):
 async def submit_follow_up_responses(round: int, request: FollowUpResponsesRequest):
     """Submit follow-up responses"""
     try:
+        print(f"DEBUG: Received follow-up responses for round {round}")
+        print(f"DEBUG: Request data: userId={request.userId}, responses count={len(request.responses)}")
+        
         if round not in [1, 2]:
             raise HTTPException(status_code=400, detail="Round must be 1 or 2")
+        
+        # Debug the first response structure
+        if request.responses:
+            print(f"DEBUG: First response structure: {request.responses[0].__dict__ if hasattr(request.responses[0], '__dict__') else request.responses[0]}")
         
         result = await assessment_service.submit_follow_up_responses(
             request.userId, request.responses, round
         )
         return result
     except Exception as e:
+        print(f"ERROR: Submit follow-up responses failed: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/summary/initial/{user_id}")

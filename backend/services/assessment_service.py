@@ -2,11 +2,11 @@ from typing import List, Dict, Any
 import math
 from datetime import datetime
 from .sheets_service import SheetsService
-from .huggingface_ai_service import HuggingFaceAIService
+from .groq_ai_service import GroqAIService
 from models.schemas import UserCreate, UserResponse, TraitScore, FinalResults
 
 class AssessmentService:
-    def __init__(self, sheets_service: SheetsService, ai_service: HuggingFaceAIService):
+    def __init__(self, sheets_service: SheetsService, ai_service: GroqAIService):
         self.sheets_service = sheets_service
         self.ai_service = ai_service  # FREE AI Service!
         
@@ -86,6 +86,8 @@ class AssessmentService:
     async def generate_follow_up_questions(self, user_id: str, round_num: int) -> List[Dict[str, Any]]:
         """Generate personalized follow-up questions"""
         try:
+            print(f"DEBUG: Assessment service generating follow-up questions for {user_id}, round {round_num}")
+            
             # Get previous responses
             if round_num == 1:
                 previous_responses = await self.sheets_service.get_user_responses(user_id, "initial")
@@ -94,11 +96,24 @@ class AssessmentService:
             
             # Get current trait rankings
             trait_rankings = self.user_trait_rankings.get(user_id, {})
+            print(f"DEBUG: Retrieved trait rankings for {user_id}: {len(trait_rankings)} traits")
+            print(f"DEBUG: Previous responses count: {len(previous_responses)}")
+            
+            # If no trait rankings in memory, try to regenerate from initial responses
+            if not trait_rankings and round_num == 1:
+                print(f"DEBUG: No trait rankings in memory, regenerating from initial responses")
+                initial_responses = await self.sheets_service.get_user_responses(user_id, "User_Responses")
+                if initial_responses:
+                    trait_rankings = await self.ai_service.analyze_trait_rankings(initial_responses)
+                    self.user_trait_rankings[user_id] = trait_rankings
+                    print(f"DEBUG: Regenerated {len(trait_rankings)} trait rankings")
             
             # Generate questions using LLM
             questions = await self.ai_service.generate_follow_up_questions(
                 user_id, round_num, previous_responses, trait_rankings
             )
+            
+            print(f"DEBUG: Generated {len(questions)} questions")
             
             # Save questions to Google Sheets
             await self.sheets_service.save_follow_up_questions(user_id, questions, round_num)
@@ -106,6 +121,7 @@ class AssessmentService:
             return questions
             
         except Exception as e:
+            print(f"ERROR: Failed to generate follow-up questions: {str(e)}")
             raise Exception(f"Failed to generate follow-up questions: {str(e)}")
     
     async def submit_follow_up_responses(self, user_id: str, responses: List[Dict[str, Any]], round_num: int) -> Dict[str, Any]:
@@ -151,7 +167,7 @@ class AssessmentService:
             
             # Generate summary using LLM
             summary = await self.ai_service.generate_summary(
-                {"initial": initial_responses}, trait_rankings, "initial"
+                user_id, initial_responses, trait_rankings, "initial"
             )
             
             return summary
@@ -163,20 +179,22 @@ class AssessmentService:
         """Generate follow-up summary after each round"""
         try:
             # Get all user responses up to this point
-            user_responses = {
-                "initial": await self.sheets_service.get_user_responses(user_id, "initial"),
-                "follow_up_1": await self.sheets_service.get_user_responses(user_id, "follow_up_1")
-            }
+            all_responses = []
+            initial_responses = await self.sheets_service.get_user_responses(user_id, "initial")
+            follow_up_1_responses = await self.sheets_service.get_user_responses(user_id, "follow_up_1")
+            all_responses.extend(initial_responses)
+            all_responses.extend(follow_up_1_responses)
             
             if round_num == 2:
-                user_responses["follow_up_2"] = await self.sheets_service.get_user_responses(user_id, "follow_up_2")
+                follow_up_2_responses = await self.sheets_service.get_user_responses(user_id, "follow_up_2")
+                all_responses.extend(follow_up_2_responses)
             
             # Get current trait rankings
             trait_rankings = self.user_trait_rankings.get(user_id, {})
             
             # Generate summary using LLM
             summary = await self.ai_service.generate_summary(
-                user_responses, trait_rankings, "follow_up"
+                user_id, all_responses, trait_rankings, "follow_up"
             )
             
             return summary
@@ -188,18 +206,20 @@ class AssessmentService:
         """Generate final comprehensive personality summary"""
         try:
             # Get all user responses
-            user_responses = {
-                "initial": await self.sheets_service.get_user_responses(user_id, "initial"),
-                "follow_up_1": await self.sheets_service.get_user_responses(user_id, "follow_up_1"),
-                "follow_up_2": await self.sheets_service.get_user_responses(user_id, "follow_up_2")
-            }
+            all_responses = []
+            initial_responses = await self.sheets_service.get_user_responses(user_id, "initial")
+            follow_up_1_responses = await self.sheets_service.get_user_responses(user_id, "follow_up_1")
+            follow_up_2_responses = await self.sheets_service.get_user_responses(user_id, "follow_up_2")
+            all_responses.extend(initial_responses)
+            all_responses.extend(follow_up_1_responses)
+            all_responses.extend(follow_up_2_responses)
             
             # Get final trait rankings
             trait_rankings = self.user_trait_rankings.get(user_id, {})
             
             # Generate final summary using LLM
             summary = await self.ai_service.generate_summary(
-                user_responses, trait_rankings, "final"
+                user_id, all_responses, trait_rankings, "final"
             )
             
             return summary
@@ -230,13 +250,13 @@ class AssessmentService:
             # Sort by ranking
             traits.sort(key=lambda x: x.ranking)
             
-            # Save to Google Sheets
-            trait_dict = [{"name": t.name, "ranking": t.ranking} for t in traits]
-            await self.sheets_service.save_final_results(user_id, "User Name", trait_dict)
+            # Save to Google Sheets with trait rankings
+            user_name = await self.sheets_service.get_user_name(user_id)
+            await self.sheets_service.save_final_results(user_id, user_name, trait_rankings)
             
             return FinalResults(
                 userId=user_id,
-                name="User Name",  # You might want to get this from user data
+                name=user_name,
                 traits=traits,
                 timestamp=datetime.now().isoformat(),
                 assessmentAccuracy=96.0  # Mock accuracy score

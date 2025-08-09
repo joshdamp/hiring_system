@@ -144,72 +144,139 @@ class SheetsService:
             raise e
 
     async def get_fixed_questions(self) -> List[Dict[str, Any]]:
-        """Get fixed questions from the spreadsheet"""
+        """Get Likert scale questions from the spreadsheet"""
         try:
             if not self.spreadsheet:
-                return self._get_mock_fixed_questions()
+                return self._get_mock_likert_questions()
             
             worksheet = self.spreadsheet.worksheet("Fixed_Questions")
-            records = worksheet.get_all_records()
+            # Get all values and skip the header row (first row)
+            all_values = worksheet.get_all_values()
             
+            if len(all_values) <= 1:  # Only header or empty
+                print("No data rows found, using mock questions")
+                return self._get_mock_likert_questions()
+            
+            # Skip header row (index 0) and process data rows
             questions = []
-            for record in records:
-                questions.append({
-                    "QuestionID": record.get("QuestionID", ""),
-                    "Prompt": record.get("Prompt", ""),
-                    "Option1": record.get("Option1", ""),
-                    "Option2": record.get("Option2", ""),
-                    "Option3": record.get("Option3", ""),
-                    "Option4": record.get("Option4", "")
-                })
+            for row in all_values[1:]:  # Skip first row (headers)
+                if len(row) >= 4 and row[0].strip():  # Ensure we have all required columns and QuestionID is not empty
+                    questions.append({
+                        "QuestionID": row[0].strip(),
+                        "LeftStatement": row[1].strip(),
+                        "RightStatement": row[2].strip(),
+                        "Theme": row[3].strip()
+                    })
             
+            print(f"Loaded {len(questions)} questions from Google Sheets")
             return questions
             
         except Exception as e:
-            return self._get_mock_fixed_questions()
+            print(f"Error loading questions from sheets: {e}")
+            return self._get_mock_likert_questions()
     
-    def _get_mock_fixed_questions(self) -> List[Dict[str, Any]]:
-        """Return mock fixed questions for development"""
+    def _get_mock_likert_questions(self) -> List[Dict[str, Any]]:
+        """Return mock Likert scale questions for development"""
         return [
+            # Strategic Theme (Q001-Q004)
             {
-                "QuestionID": "Q1",
-                "Prompt": "When you post something and no one reacts to it, what do you usually do?",
-                "Option1": "Wait and hope someone notices eventually",
-                "Option2": "Ask for feedback so I can improve",
-                "Option3": "Feel discouraged and stop posting for now",
-                "Option4": "Keep going—results take time anyway"
+                "QuestionID": "Q001",
+                "LeftStatement": "I enjoy imagining what the future could look like",
+                "RightStatement": "I prefer dealing with today, not the future",
+                "Theme": "Strategic"
             },
             {
-                "QuestionID": "Q2",
-                "Prompt": "When working on a team project, you typically:",
-                "Option1": "Take charge and delegate tasks",
-                "Option2": "Wait for others to assign you tasks",
-                "Option3": "Suggest ideas and collaborate equally",
-                "Option4": "Focus on your specific expertise area"
+                "QuestionID": "Q002", 
+                "LeftStatement": "I like to analyze complex problems before making decisions",
+                "RightStatement": "I prefer to make quick decisions and adjust later",
+                "Theme": "Strategic"
             },
             {
-                "QuestionID": "Q3",
-                "Prompt": "In stressful situations, you tend to:",
-                "Option1": "Stay calm and think logically",
-                "Option2": "Feel overwhelmed but push through",
-                "Option3": "Seek support from others",
-                "Option4": "Take breaks to recharge"
+                "QuestionID": "Q003",
+                "LeftStatement": "I enjoy setting long-term goals and plans",
+                "RightStatement": "I prefer to focus on immediate priorities",
+                "Theme": "Strategic"
             },
             {
-                "QuestionID": "Q4",
-                "Prompt": "How do you prefer to learn new skills?",
-                "Option1": "Hands-on practice and experimentation",
-                "Option2": "Structured courses or tutorials",
-                "Option3": "Learning from experienced colleagues",
-                "Option4": "Reading documentation and best practices"
+                "QuestionID": "Q004",
+                "LeftStatement": "I like to consider multiple options before choosing",
+                "RightStatement": "I prefer to go with my first instinct",
+                "Theme": "Strategic"
+            },
+            # Executing Theme (Q005-Q008)
+            {
+                "QuestionID": "Q005",
+                "LeftStatement": "I plan things out in detail before starting",
+                "RightStatement": "I prefer to be flexible and adapt as I go",
+                "Theme": "Executing"
             },
             {
-                "QuestionID": "Q5",
-                "Prompt": "When receiving constructive feedback, you:",
-                "Option1": "Ask clarifying questions to understand better",
-                "Option2": "Take notes and create an improvement plan",
-                "Option3": "Implement changes immediately",
-                "Option4": "Reflect on the feedback before responding"
+                "QuestionID": "Q006",
+                "LeftStatement": "I focus on completing tasks efficiently",
+                "RightStatement": "I focus on ensuring quality over speed",
+                "Theme": "Executing"
+            },
+            {
+                "QuestionID": "Q007",
+                "LeftStatement": "I prefer clear rules and procedures",
+                "RightStatement": "I prefer creative freedom and flexibility",
+                "Theme": "Executing"
+            },
+            {
+                "QuestionID": "Q008",
+                "LeftStatement": "I like to finish one task before starting another",
+                "RightStatement": "I like to work on multiple tasks simultaneously",
+                "Theme": "Executing"
+            },
+            # Influencing Theme (Q009-Q012)
+            {
+                "QuestionID": "Q009",
+                "LeftStatement": "I speak up in group discussions",
+                "RightStatement": "I prefer to listen and observe in groups",
+                "Theme": "Influencing"
+            },
+            {
+                "QuestionID": "Q010",
+                "LeftStatement": "I enjoy convincing others to see my point of view",
+                "RightStatement": "I prefer to understand others' perspectives first",
+                "Theme": "Influencing"
+            },
+            {
+                "QuestionID": "Q011",
+                "LeftStatement": "I like to take charge in group situations",
+                "RightStatement": "I prefer to support others who take the lead",
+                "Theme": "Influencing"
+            },
+            {
+                "QuestionID": "Q012",
+                "LeftStatement": "I enjoy presenting ideas to large groups",
+                "RightStatement": "I prefer one-on-one conversations",
+                "Theme": "Influencing"
+            },
+            # Relationship Building Theme (Q013-Q016)
+            {
+                "QuestionID": "Q013",
+                "LeftStatement": "I feel energized by social interactions",
+                "RightStatement": "I feel energized by quiet reflection",
+                "Theme": "Relationship Building"
+            },
+            {
+                "QuestionID": "Q014",
+                "LeftStatement": "I like to work in teams and collaborate",
+                "RightStatement": "I prefer to work independently",
+                "Theme": "Relationship Building"
+            },
+            {
+                "QuestionID": "Q015",
+                "LeftStatement": "I make decisions based on feelings and values",
+                "RightStatement": "I make decisions based on logic and facts",
+                "Theme": "Relationship Building"
+            },
+            {
+                "QuestionID": "Q016",
+                "LeftStatement": "I focus on building relationships with people",
+                "RightStatement": "I focus on completing tasks efficiently",
+                "Theme": "Relationship Building"
             }
         ]
 
@@ -246,19 +313,23 @@ class SheetsService:
             if not self.spreadsheet:
                 return True
             
+            # Get user name
+            user_name = await self.get_user_name(user_id)
+            
             sheet_name = f"Follow_Up_Questions{round_num}"
             
             try:
                 worksheet = self.spreadsheet.worksheet(sheet_name)
             except:
                 worksheet = self.spreadsheet.add_worksheet(title=sheet_name, rows=1000, cols=10)
-                worksheet.append_row(["UserId", "QuestionID", "QuestionText"])
+                worksheet.append_row(["UserId", "UserName", "QuestionID", "QuestionText"])
             
             for question in questions:
                 row_data = [
-                    user_id,
-                    question.get('QuestionID', ''),
-                    question.get('QuestionText', '')
+                    user_id,                                                    # UserId
+                    user_name,                                                  # UserName  
+                    question.get('QuestionID', ''),                           # QuestionID
+                    question.get('Prompt', question.get('QuestionText', ''))  # QuestionText
                 ]
                 worksheet.append_row(row_data)
                 await asyncio.sleep(0.5)
@@ -269,12 +340,15 @@ class SheetsService:
             return False
 
     async def save_follow_up_responses(self, user_id: str, responses: List[Dict[str, Any]], round_num: int) -> bool:
-        """Save follow-up responses"""
+        """Save follow-up responses - handles both single responses and dual choices"""
         try:
             await self._rate_limit()
             
             if not self.spreadsheet:
                 return True
+            
+            # Get user name
+            user_name = await self.get_user_name(user_id)
             
             sheet_name = f"User_Response_Follow_Up_{round_num}"
             
@@ -282,21 +356,43 @@ class SheetsService:
                 worksheet = self.spreadsheet.worksheet(sheet_name)
             except:
                 worksheet = self.spreadsheet.add_worksheet(title=sheet_name, rows=1000, cols=10)
-                worksheet.append_row(["UserId", "QuestionID", "Response", "Timestamp"])
+                
+                # Create appropriate headers based on round
+                if round_num == 1:
+                    # Chapter 2: Dual-choice format (round 1)
+                    worksheet.append_row(["UserId", "UserName", "QuestionID", "FirstChoice", "SecondChoice", "Timestamp"])
+                else:
+                    # Chapter 3: Regular text response format (round 2)
+                    worksheet.append_row(["UserId", "UserName", "QuestionID", "Response", "Timestamp"])
             
             for response in responses:
-                row_data = [
-                    user_id,
-                    response.get('questionId', ''),
-                    response.get('response', ''),
-                    response.get('timestamp', '')
-                ]
+                if round_num == 1:
+                    # Chapter 2: Dual-choice responses (round 1)
+                    row_data = [
+                        user_id,
+                        user_name,
+                        response.get('questionId', ''),
+                        response.get('firstChoice', ''),
+                        response.get('secondChoice', ''),
+                        response.get('timestamp', '')
+                    ]
+                else:
+                    # Chapter 3: Regular text responses (round 2)
+                    row_data = [
+                        user_id,
+                        user_name,
+                        response.get('questionId', ''),
+                        response.get('response', ''),
+                        response.get('timestamp', '')
+                    ]
+                
                 worksheet.append_row(row_data)
                 await asyncio.sleep(0.5)
             
             return True
             
         except Exception as e:
+            print(f"Error saving follow-up responses: {e}")
             return False
 
     async def get_user_responses(self, user_id: str, sheet_name: str) -> List[Dict[str, Any]]:
@@ -321,28 +417,105 @@ class SheetsService:
         except Exception as e:
             return []
 
-    async def save_final_results(self, user_id: str, name: str, traits: List[Dict[str, Any]]) -> bool:
-        """Save final trait rankings to Final_Results sheet"""
+    async def get_user_name(self, user_id: str) -> str:
+        """Get user name from User_Profiles sheet"""
+        try:
+            if not self.spreadsheet:
+                return "Unknown User"
+            
+            # Try User_Profiles first, then User_Info as fallback
+            for sheet_name in ["User_Profiles", "User_Info"]:
+                try:
+                    worksheet = self.spreadsheet.worksheet(sheet_name)
+                    records = worksheet.get_all_records()
+                    
+                    for record in records:
+                        # Check both userId and UserId fields
+                        record_user_id = record.get('userId') or record.get('UserId')
+                        if record_user_id == user_id:
+                            # Try different possible name fields - check Name first (capital N)
+                            name = record.get('Name') or record.get('name') or record.get('UserName')
+                            if name:
+                                print(f"DEBUG: Found user name: {name} for user {user_id}")
+                                return name
+                            
+                            # Fallback to firstName + lastName
+                            first_name = record.get('firstName', '') or record.get('FirstName', '')
+                            last_name = record.get('lastName', '') or record.get('LastName', '')
+                            full_name = f"{first_name} {last_name}".strip()
+                            if full_name:
+                                return full_name
+                    
+                    break  # If we found the sheet, don't try the fallback
+                except Exception as e:
+                    print(f"Could not access sheet {sheet_name}: {e}")
+                    continue
+            
+            return "Unknown User"
+            
+        except Exception as e:
+            print(f"Error getting user name: {e}")
+            return "Unknown User"
+    
+    async def save_final_results(self, user_id: str, name: str, trait_rankings: Dict[str, int]) -> bool:
+        """Save final trait rankings to Final_Results sheet with all 34 CliftonStrengths"""
         try:
             await self._rate_limit()
             
             if not self.spreadsheet:
+                print(f"Mock mode: Would save final results for {user_id} - {name}")
+                print(f"Trait rankings: {trait_rankings}")
                 return True
             
             worksheet = self.spreadsheet.worksheet("Final_Results")
             
-            traits_summary = " | ".join([f"{trait['name']}: {trait['score']:.1f}" for trait in traits])
+            # Check if this user's results already exist
+            existing_data = worksheet.get_all_values()
+            for row in existing_data:
+                if row and user_id in str(row[0]):
+                    print(f"Results for user {user_id} already exist, skipping...")
+                    return True
             
-            row_data = [
-                user_id,
-                name,
-                datetime.now().isoformat(),
-                traits_summary,
-                json.dumps(traits)
+            # Check if this is the first entry (add headers)
+            try:
+                if not existing_data or (len(existing_data) == 1 and not existing_data[0][0]):
+                    # Add headers
+                    headers = ["UserID & Name", "Traits", "Ranking"]
+                    worksheet.clear()
+                    worksheet.append_row(headers)
+            except Exception:
+                # If worksheet doesn't exist or is empty, create headers
+                headers = ["UserID & Name", "Traits", "Ranking"]
+                worksheet.clear()
+                worksheet.append_row(headers)
+            
+            # Add user info row
+            user_info_row = [f"{user_id} {name}", "", ""]
+            worksheet.append_row(user_info_row)
+            
+            # Add all 34 traits with their rankings
+            # Define the standard order of CliftonStrengths
+            all_clifton_strengths = [
+                "Strategic", "Activator", "Command", "Significance", "Futuristic",
+                "Individualization", "Maximizer", "Competition", "Self-Assurance", "Ideation",
+                "Focus", "Communication", "Input", "Achiever", "Learner",
+                "Responsibility", "Restorative", "Analytical", "Arranger", "Developer",
+                "Intellection", "Empathy", "Belief", "Relator", "Adaptability",
+                "Positivity", "Connectedness", "Context", "Woo", "Discipline",
+                "Deliberative", "Includer", "Harmony", "Consistency"
             ]
-            worksheet.append_row(row_data)
+            
+            # Add each trait with its ranking
+            for trait in all_clifton_strengths:
+                ranking = trait_rankings.get(trait, 35)  # Default to 35 if trait not found
+                trait_row = ["", trait, ranking]
+                worksheet.append_row(trait_row)
+            
+            # Add empty row for separation
+            worksheet.append_row(["", "", ""])
             
             return True
             
         except Exception as e:
+            print(f"Error saving final results: {e}")
             return False

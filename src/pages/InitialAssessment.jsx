@@ -10,14 +10,14 @@ import {
   Radio,
   RadioGroup,
   FormControlLabel,
-  FormControl,
   LinearProgress,
   Alert,
   Chip,
+  Paper,
+  Grid,
 } from '@mui/material';
 import {
   PsychologyOutlined,
-  QuestionAnswerOutlined,
   TimerOutlined,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -25,6 +25,13 @@ import { useUser } from '../context/UserContext';
 import { apiService } from '../services/api';
 import ProgressStepper from '../components/ProgressStepper';
 import LoadingPage from '../components/LoadingPage';
+
+const themeColors = {
+  'Strategic': '#d4af37',     // Gold theme
+  'Executing': '#d4af37',     // Gold theme
+  'Influencing': '#d4af37',   // Gold theme  
+  'Relationship': '#d4af37'   // Gold theme
+};
 
 function InitialAssessment() {
   const navigate = useNavigate();
@@ -54,13 +61,16 @@ function InitialAssessment() {
   const loadQuestions = async () => {
     try {
       setLoading(true);
+      console.log('Loading questions...');
       const questionsData = await apiService.getFixedQuestions();
+      console.log('Questions loaded:', questionsData);
       
-      // Shuffle questions for randomization
-      const shuffledQuestions = [...questionsData].sort(() => Math.random() - 0.5);
+      if (!questionsData || questionsData.length === 0) {
+        throw new Error('No questions received from API');
+      }
       
-      setQuestions(shuffledQuestions);
-      actions.setQuestions('fixed', shuffledQuestions);
+      setQuestions(questionsData);
+      actions.setQuestions('fixed', questionsData);
     } catch (error) {
       console.error('Error loading questions:', error);
       setError('Failed to load questions. Please try again.');
@@ -73,6 +83,8 @@ function InitialAssessment() {
     const questionId = questions[currentQuestionIndex].QuestionID;
     const response = parseInt(event.target.value);
     
+    console.log(`Response for ${questionId}: ${response}`);
+    
     setResponses(prev => ({
       ...prev,
       [questionId]: response,
@@ -82,6 +94,8 @@ function InitialAssessment() {
   const handleNext = () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
+    } else {
+      handleSubmit();
     }
   };
 
@@ -101,6 +115,8 @@ function InitialAssessment() {
         response,
         timestamp: new Date().toISOString(),
       }));
+      
+      console.log('Submitting responses:', formattedResponses);
       
       // Submit responses to backend
       await apiService.submitInitialResponses(state.userInfo.userId, formattedResponses);
@@ -128,7 +144,7 @@ function InitialAssessment() {
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
   const currentQuestion = questions[currentQuestionIndex];
   const currentResponse = currentQuestion ? responses[currentQuestion.QuestionID] : null;
-  const allQuestionsAnswered = questions.every(q => responses[q.QuestionID] !== undefined);
+  const themeColor = currentQuestion ? themeColors[currentQuestion.Theme] || '#1976d2' : '#1976d2';
 
   if (loading) {
     return <LoadingPage message="Loading your personalized assessment..." />;
@@ -152,6 +168,16 @@ function InitialAssessment() {
     );
   }
 
+  if (!questions || questions.length === 0) {
+    return (
+      <Container maxWidth="md">
+        <Alert severity="warning" sx={{ mt: 4 }}>
+          No questions available. Please check your connection and try again.
+        </Alert>
+      </Container>
+    );
+  }
+
   const cardVariants = {
     enter: { opacity: 0, x: 100 },
     center: { opacity: 1, x: 0 },
@@ -159,7 +185,7 @@ function InitialAssessment() {
   };
 
   return (
-    <Container maxWidth="md">
+    <Container maxWidth="lg">
       <ProgressStepper activeStep={1} />
       
       {/* Header */}
@@ -170,7 +196,7 @@ function InitialAssessment() {
               <PsychologyOutlined sx={{ fontSize: 32, color: 'primary.main', mr: 2 }} />
               <Box>
                 <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                  Psychometric Assessment
+                  Personality Assessment
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Question {currentQuestionIndex + 1} of {questions.length}
@@ -185,8 +211,14 @@ function InitialAssessment() {
                 variant="outlined"
               />
               <Chip
-                label={`${Math.round(progress)}% Complete`}
-                color="primary"
+                label={currentQuestion?.Theme || 'Unknown'}
+                sx={{ 
+                  backgroundColor: themeColor, 
+                  color: '#ffffff',
+                  fontWeight: 'bold',
+                  border: '2px solid',
+                  borderColor: 'rgba(255,255,255,0.3)'
+                }}
               />
             </Box>
           </Box>
@@ -195,12 +227,12 @@ function InitialAssessment() {
             variant="determinate"
             value={progress}
             sx={{
-              height: 8,
-              borderRadius: 4,
+              height: 10,
+              borderRadius: 5,
               backgroundColor: 'grey.200',
               '& .MuiLinearProgress-bar': {
-                borderRadius: 4,
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                borderRadius: 5,
+                backgroundColor: themeColor,
               },
             }}
           />
@@ -220,103 +252,109 @@ function InitialAssessment() {
           >
             <Card sx={{ borderRadius: 3, boxShadow: 3 }}>
               <CardContent sx={{ p: 4 }}>
-                <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 4 }}>
-                  <QuestionAnswerOutlined 
-                    sx={{ fontSize: 24, color: 'primary.main', mr: 2, mt: 1 }} 
-                  />
-                  <Typography variant="h6" sx={{ flex: 1, fontWeight: 500 }}>
-                    {currentQuestion.Prompt}
+                
+                {/* Left Statement */}
+                <Box sx={{ mb: 4 }}>
+                  <Typography variant="h6" sx={{ color: '#1976d2', mb: 2 }}>
+                    Statement A:
+                  </Typography>
+                  <Typography variant="body1" sx={{ fontSize: '1.2rem', fontWeight: 500, fontStyle: 'italic' }}>
+                    "{currentQuestion.LeftStatement}"
                   </Typography>
                 </Box>
 
-                <FormControl component="fieldset" fullWidth>
+                {/* Right Statement */}
+                <Box sx={{ mb: 4 }}>
+                  <Typography variant="h6" sx={{ color: '#dc004e', mb: 2 }}>
+                    Statement B:
+                  </Typography>
+                  <Typography variant="body1" sx={{ fontSize: '1.2rem', fontWeight: 500, fontStyle: 'italic' }}>
+                    "{currentQuestion.RightStatement}"
+                  </Typography>
+                </Box>
+
+                {/* Likert Scale */}
+                <Paper elevation={2} sx={{ p: 4, bgcolor: '#f8f9fa' }}>
+                  <Typography variant="h6" align="center" sx={{ mb: 3, color: '#333333', fontWeight: 'bold' }}>
+                    Which statement describes you better?
+                  </Typography>
+                  
                   <RadioGroup
                     value={currentResponse || ''}
                     onChange={handleResponseChange}
-                    sx={{ mt: 2 }}
+                    sx={{ width: '100%' }}
                   >
-                    <FormControlLabel
-                      value="1"
-                      control={<Radio />}
-                      label={
-                        <Typography variant="body1" sx={{ ml: 1 }}>
-                          {currentQuestion.Option1}
+                    <Grid container spacing={1} alignItems="center" justifyContent="center">
+                      {/* Left side labels */}
+                      <Grid item xs={2}>
+                        <Typography variant="body2" align="center" sx={{ color: '#333333', fontWeight: 'bold' }}>
+                          Statement A
                         </Typography>
-                      }
-                      sx={{
-                        mb: 2,
-                        p: 2,
-                        borderRadius: 2,
-                        border: '1px solid',
-                        borderColor: currentResponse === 1 ? 'primary.main' : 'divider',
-                        backgroundColor: currentResponse === 1 ? 'primary.light' : 'transparent',
-                        '&:hover': {
-                          backgroundColor: 'grey.50',
-                        },
-                      }}
-                    />
-                    <FormControlLabel
-                      value="2"
-                      control={<Radio />}
-                      label={
-                        <Typography variant="body1" sx={{ ml: 1 }}>
-                          {currentQuestion.Option2}
+                      </Grid>
+                      
+                      {/* Scale options */}
+                      <Grid item xs={8}>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center',
+                          px: 2 
+                        }}>
+                          {[
+                            { value: '1', label: 'Strongly A' },
+                            { value: '2', label: 'Somewhat A' },
+                            { value: '3', label: 'Neutral' },
+                            { value: '4', label: 'Somewhat B' },
+                            { value: '5', label: 'Strongly B' }
+                          ].map((option) => (
+                            <Box key={option.value} sx={{ textAlign: 'center' }}>
+                              <FormControlLabel
+                                value={option.value}
+                                control={
+                                  <Radio 
+                                    sx={{ 
+                                      color: option.value <= '2' ? '#d4af37' : option.value === '3' ? '#757575' : '#b8941f',
+                                      '&.Mui-checked': {
+                                        color: option.value <= '2' ? '#d4af37' : option.value === '3' ? '#757575' : '#b8941f',
+                                      },
+                                      transform: 'scale(1.3)'
+                                    }} 
+                                  />
+                                }
+                                label=""
+                                sx={{ 
+                                  margin: 0,
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center'
+                                }}
+                              />
+                              <Typography 
+                                variant="caption" 
+                                sx={{ 
+                                  mt: 1, 
+                                  display: 'block',
+                                  color: option.value <= '2' ? '#d4af37' : option.value === '3' ? '#757575' : '#b8941f',
+                                  fontWeight: 'bold',
+                                  fontSize: '0.8rem'
+                                }}
+                              >
+                                {option.label}
+                              </Typography>
+                            </Box>
+                          ))}
+                        </Box>
+                      </Grid>
+                      
+                      {/* Right side labels */}
+                      <Grid item xs={2}>
+                        <Typography variant="body2" align="center" sx={{ color: '#333333', fontWeight: 'bold' }}>
+                          Statement B
                         </Typography>
-                      }
-                      sx={{
-                        mb: 2,
-                        p: 2,
-                        borderRadius: 2,
-                        border: '1px solid',
-                        borderColor: currentResponse === 2 ? 'primary.main' : 'divider',
-                        backgroundColor: currentResponse === 2 ? 'primary.light' : 'transparent',
-                        '&:hover': {
-                          backgroundColor: 'grey.50',
-                        },
-                      }}
-                    />
-                    <FormControlLabel
-                      value="3"
-                      control={<Radio />}
-                      label={
-                        <Typography variant="body1" sx={{ ml: 1 }}>
-                          {currentQuestion.Option3}
-                        </Typography>
-                      }
-                      sx={{
-                        mb: 2,
-                        p: 2,
-                        borderRadius: 2,
-                        border: '1px solid',
-                        borderColor: currentResponse === 3 ? 'primary.main' : 'divider',
-                        backgroundColor: currentResponse === 3 ? 'primary.light' : 'transparent',
-                        '&:hover': {
-                          backgroundColor: 'grey.50',
-                        },
-                      }}
-                    />
-                    <FormControlLabel
-                      value="4"
-                      control={<Radio />}
-                      label={
-                        <Typography variant="body1" sx={{ ml: 1 }}>
-                          {currentQuestion.Option4}
-                        </Typography>
-                      }
-                      sx={{
-                        mb: 2,
-                        p: 2,
-                        borderRadius: 2,
-                        border: '1px solid',
-                        borderColor: currentResponse === 4 ? 'primary.main' : 'divider',
-                        backgroundColor: currentResponse === 4 ? 'primary.light' : 'transparent',
-                        '&:hover': {
-                          backgroundColor: 'grey.50',
-                        },
-                      }}
-                    />
+                      </Grid>
+                    </Grid>
                   </RadioGroup>
-                </FormControl>
+                </Paper>
 
                 {/* Navigation Buttons */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
@@ -324,38 +362,27 @@ function InitialAssessment() {
                     variant="outlined"
                     onClick={handlePrevious}
                     disabled={currentQuestionIndex === 0}
-                    sx={{ px: 3 }}
+                    sx={{ minWidth: 100 }}
                   >
                     Previous
                   </Button>
                   
-                  <Box sx={{ display: 'flex', gap: 2 }}>
-                    {currentQuestionIndex < questions.length - 1 ? (
-                      <Button
-                        variant="contained"
-                        onClick={handleNext}
-                        disabled={!currentResponse}
-                        sx={{
-                          px: 3,
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        }}
-                      >
-                        Next
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="contained"
-                        onClick={handleSubmit}
-                        disabled={!allQuestionsAnswered || submitting}
-                        sx={{
-                          px: 3,
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        }}
-                      >
-                        {submitting ? 'Submitting...' : 'Complete Assessment'}
-                      </Button>
-                    )}
-                  </Box>
+                  <Button
+                    variant="contained"
+                    onClick={handleNext}
+                    disabled={!currentResponse || submitting}
+                    sx={{ 
+                      minWidth: 150,
+                      backgroundColor: themeColor,
+                      '&:hover': {
+                        backgroundColor: themeColor,
+                        opacity: 0.9
+                      }
+                    }}
+                  >
+                    {submitting ? 'Submitting...' : 
+                     currentQuestionIndex === questions.length - 1 ? 'Complete Assessment' : 'Next Question'}
+                  </Button>
                 </Box>
               </CardContent>
             </Card>
@@ -363,33 +390,6 @@ function InitialAssessment() {
         )}
       </AnimatePresence>
 
-      {/* Quick Navigation */}
-      <Card sx={{ mt: 3, borderRadius: 3 }}>
-        <CardContent>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            Question Progress
-          </Typography>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            {questions.map((_, index) => (
-              <Button
-                key={index}
-                size="small"
-                variant={index === currentQuestionIndex ? 'contained' : 'outlined'}
-                color={responses[questions[index]?.QuestionID] ? 'success' : 'primary'}
-                onClick={() => setCurrentQuestionIndex(index)}
-                sx={{
-                  minWidth: 36,
-                  width: 36,
-                  height: 36,
-                  p: 0,
-                }}
-              >
-                {index + 1}
-              </Button>
-            ))}
-          </Box>
-        </CardContent>
-      </Card>
     </Container>
   );
 }

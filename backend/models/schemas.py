@@ -18,6 +18,12 @@ class UserResponse(BaseModel):
     timestamp: str
 
 # Question models
+class LikertQuestion(BaseModel):
+    QuestionID: str
+    LeftStatement: str  # Left side statement (e.g., "I enjoy imagining the future")
+    RightStatement: str  # Right side statement (e.g., "I prefer dealing with today")
+    Theme: str  # Strategic, Executing, Influencing, Relationship Building
+
 class FixedQuestion(BaseModel):
     QuestionID: str
     Prompt: str
@@ -31,9 +37,16 @@ class FollowUpQuestion(BaseModel):
     QuestionText: str
 
 # Response models
+class LikertResponse(BaseModel):
+    questionId: str
+    response: int = Field(..., ge=1, le=5, description="1=Strongly Left, 2=Somewhat Left, 3=Neutral, 4=Somewhat Right, 5=Strongly Right")
+    timestamp: str
+
 class QuestionResponse(BaseModel):
     questionId: str
-    response: Any  # Can be int (1-4) for fixed questions or str for follow-up
+    response: Optional[Any] = None  # For regular responses (Chapter 3, text answers)
+    firstChoice: Optional[str] = None  # For dual-choice responses (Chapter 2)
+    secondChoice: Optional[str] = None  # For dual-choice responses (Chapter 2)
     timestamp: str
 
 class InitialResponsesRequest(BaseModel):

@@ -133,44 +133,6 @@ function Summary() {
           </Card>
         </motion.div>
 
-        {/* User Info Summary */}
-        <motion.div variants={itemVariants}>
-          <Card sx={{ mb: 3, borderRadius: 3 }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                <PersonOutlined sx={{ fontSize: 24, color: 'primary.main', mr: 2 }} />
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  Assessment Overview
-                </Typography>
-              </Box>
-              
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}>
-                <Chip
-                  icon={<PersonOutlined />}
-                  label={state.userInfo.name}
-                  color="primary"
-                  variant="outlined"
-                />
-                <Chip
-                  label={`${state.userInfo.age} years old`}
-                  color="secondary"
-                  variant="outlined"
-                />
-                <Chip
-                  label={`${state.userInfo.experience} years experience`}
-                  color="info"
-                  variant="outlined"
-                />
-                <Chip
-                  label={`${state.responses.initial?.length || 0} questions answered`}
-                  color="success"
-                  variant="outlined"
-                />
-              </Box>
-            </CardContent>
-          </Card>
-        </motion.div>
-
         {/* Personality Summary */}
         <motion.div variants={itemVariants}>
           <Card sx={{ mb: 4, borderRadius: 3, boxShadow: 3 }}>
