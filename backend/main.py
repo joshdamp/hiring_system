@@ -13,14 +13,14 @@ load_dotenv('../.env')  # Then load from root .env (will not override existing v
 # Import our modules
 from models.schemas import *
 from services.sheets_service import SheetsService
-from services.groq_ai_service import GroqAIService
+from services.nvidia_ai_service import NvidiaAIService
 from services.assessment_service import AssessmentService
 
 # Initialize FastAPI app
 app = FastAPI(
     title="Automated Hiring System API",
-    description="AI-powered psychometric assessment for hiring",
-    version="1.0.0"
+    description="AI-powered psychometric assessment for hiring with NVIDIA Llama models",
+    version="1.0.1"
 )
 
 # CORS middleware  
@@ -43,7 +43,7 @@ app.add_middleware(
 
 # Initialize services
 sheets_service = SheetsService()
-ai_service = GroqAIService()  # FREE AI Service!
+ai_service = NvidiaAIService()  # NVIDIA AI Service!
 assessment_service = AssessmentService(sheets_service, ai_service)
 
 @app.get("/")
@@ -96,7 +96,7 @@ async def get_fixed_questions():
 # Also add endpoint without /api prefix for frontend compatibility
 @app.get("/questions/fixed")
 async def get_fixed_questions_alt():
-    """Get all fixed psychometric questions (alternative endpoint)"""
+    """Get all fixed talent assessment questions (alternative endpoint)"""
     return await get_fixed_questions()
 
 @app.post("/questions/follow-up/{round}")
@@ -127,11 +127,16 @@ async def get_follow_up_questions(round: int, request: FollowUpQuestionsRequest)
 async def submit_initial_responses(request: InitialResponsesRequest):
     """Submit initial assessment responses"""
     try:
+        print(f"DEBUG: Received initial responses for user {request.userId}")
+        print(f"DEBUG: Number of responses: {len(request.responses)}")
         result = await assessment_service.submit_initial_responses(
             request.userId, request.responses
         )
         return result
     except Exception as e:
+        print(f"ERROR in submit_initial_responses: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/responses/follow-up/{round}")
@@ -160,9 +165,13 @@ async def submit_follow_up_responses(round: int, request: FollowUpResponsesReque
 async def get_initial_summary(user_id: str):
     """Get initial personality summary"""
     try:
+        print(f"DEBUG: Generating initial summary for user {user_id}")
         summary = await assessment_service.generate_initial_summary(user_id)
         return {"summary": summary}
     except Exception as e:
+        print(f"ERROR in get_initial_summary: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/summary/follow-up/{user_id}/{round}")

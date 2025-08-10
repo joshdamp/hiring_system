@@ -322,14 +322,14 @@ class SheetsService:
                 worksheet = self.spreadsheet.worksheet(sheet_name)
             except:
                 worksheet = self.spreadsheet.add_worksheet(title=sheet_name, rows=1000, cols=10)
-                worksheet.append_row(["UserId", "UserName", "QuestionID", "QuestionText"])
+                worksheet.append_row(["UserID", "Name", "QuestionID", "QuestionText"])
             
             for question in questions:
                 row_data = [
                     user_id,                                                    # UserId
                     user_name,                                                  # UserName  
-                    question.get('QuestionID', ''),                           # QuestionID
-                    question.get('Prompt', question.get('QuestionText', ''))  # QuestionText
+                    question.get('questionId', question.get('QuestionID', '')), # QuestionID
+                    question.get('question', question.get('Prompt', question.get('QuestionText', '')))  # QuestionText
                 ]
                 worksheet.append_row(row_data)
                 await asyncio.sleep(0.5)
@@ -360,10 +360,10 @@ class SheetsService:
                 # Create appropriate headers based on round
                 if round_num == 1:
                     # Chapter 2: Dual-choice format (round 1)
-                    worksheet.append_row(["UserId", "UserName", "QuestionID", "FirstChoice", "SecondChoice", "Timestamp"])
+                    worksheet.append_row(["UserId", "Name", "QuestionID", "FirstChoice", "SecondChoice", "Timestamp"])
                 else:
                     # Chapter 3: Regular text response format (round 2)
-                    worksheet.append_row(["UserId", "UserName", "QuestionID", "Response", "Timestamp"])
+                    worksheet.append_row(["UserId", "Name", "QuestionID", "Response", "Timestamp"])
             
             for response in responses:
                 if round_num == 1:
@@ -423,18 +423,28 @@ class SheetsService:
             if not self.spreadsheet:
                 return "Unknown User"
             
+            print(f"DEBUG: Looking for user name for user_id: {user_id}")
+            
             # Try User_Profiles first, then User_Info as fallback
             for sheet_name in ["User_Profiles", "User_Info"]:
                 try:
                     worksheet = self.spreadsheet.worksheet(sheet_name)
                     records = worksheet.get_all_records()
                     
-                    for record in records:
-                        # Check both userId and UserId fields
-                        record_user_id = record.get('userId') or record.get('UserId')
+                    print(f"DEBUG: Found {len(records)} records in {sheet_name}")
+                    
+                    for i, record in enumerate(records):
+                        print(f"DEBUG: Record {i}: {record}")
+                        
+                        # Check both userId and UserId fields - handle case variations
+                        record_user_id = (record.get('userId') or record.get('UserId') or 
+                                        record.get('UserID') or record.get('userid'))
+                        
                         if record_user_id == user_id:
                             # Try different possible name fields - check Name first (capital N)
-                            name = record.get('Name') or record.get('name') or record.get('UserName')
+                            name = (record.get('Name') or record.get('name') or 
+                                  record.get('UserName') or record.get('username'))
+                            
                             if name:
                                 print(f"DEBUG: Found user name: {name} for user {user_id}")
                                 return name
@@ -444,13 +454,15 @@ class SheetsService:
                             last_name = record.get('lastName', '') or record.get('LastName', '')
                             full_name = f"{first_name} {last_name}".strip()
                             if full_name:
+                                print(f"DEBUG: Found full name: {full_name} for user {user_id}")
                                 return full_name
                     
                     break  # If we found the sheet, don't try the fallback
                 except Exception as e:
-                    print(f"Could not access sheet {sheet_name}: {e}")
+                    print(f"DEBUG: Sheet {sheet_name} not found or error: {e}")
                     continue
             
+            print(f"DEBUG: No user found with ID: {user_id}")
             return "Unknown User"
             
         except Exception as e:

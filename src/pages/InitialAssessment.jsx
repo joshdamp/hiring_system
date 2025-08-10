@@ -196,7 +196,7 @@ function InitialAssessment() {
               <PsychologyOutlined sx={{ fontSize: 32, color: 'primary.main', mr: 2 }} />
               <Box>
                 <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                  Personality Assessment
+                  Talent Assessment
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Question {currentQuestionIndex + 1} of {questions.length}

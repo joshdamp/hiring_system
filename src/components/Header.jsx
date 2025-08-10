@@ -48,7 +48,7 @@ function Header() {
                 fontSize: '0.9rem',
               }}
             >
-              Personalized Psychometric Assessment
+              Professional Talent Assessment
             </Typography>
           </Box>
         </motion.div>

@@ -27,7 +27,7 @@ function Landing() {
     {
       icon: <PsychologyOutlined sx={{ fontSize: 40 }} />,
       title: 'AI-Powered Assessment',
-      description: 'Advanced psychometric evaluation using machine learning algorithms',
+      description: 'Advanced talent evaluation using machine learning algorithms',
     },
     {
       icon: <PersonOutlined sx={{ fontSize: 40 }} />,
@@ -108,7 +108,7 @@ function Landing() {
               sx={{ mb: 4, maxWidth: '700px', mx: 'auto', fontSize: '1.25rem' }}
             >
               Discover your unique professional profile through our advanced
-              psychometric assessment powered by artificial intelligence.
+              talent assessment powered by artificial intelligence.
             </Typography>
             <Button
               variant="contained"
@@ -254,7 +254,7 @@ function Landing() {
                     Step 2
                   </Typography>
                   <Typography variant="body2">
-                    Complete initial psychometric assessment
+                    Complete initial talent assessment
                   </Typography>
                 </Box>
               </Grid>

@@ -2,13 +2,13 @@ from typing import List, Dict, Any
 import math
 from datetime import datetime
 from .sheets_service import SheetsService
-from .groq_ai_service import GroqAIService
+from .nvidia_ai_service import NvidiaAIService
 from models.schemas import UserCreate, UserResponse, TraitScore, FinalResults
 
 class AssessmentService:
-    def __init__(self, sheets_service: SheetsService, ai_service: GroqAIService):
+    def __init__(self, sheets_service: SheetsService, ai_service: NvidiaAIService):
         self.sheets_service = sheets_service
-        self.ai_service = ai_service  # FREE AI Service!
+        self.ai_service = ai_service  # NVIDIA AI Service!
         
         # Store trait rankings during assessment
         self.user_trait_rankings = {}
@@ -110,7 +110,7 @@ class AssessmentService:
             
             # Generate questions using LLM
             questions = await self.ai_service.generate_follow_up_questions(
-                user_id, round_num, previous_responses, trait_rankings
+                user_id, trait_rankings, previous_responses, round_num
             )
             
             print(f"DEBUG: Generated {len(questions)} questions")
