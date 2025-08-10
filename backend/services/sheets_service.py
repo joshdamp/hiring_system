@@ -423,7 +423,6 @@ class SheetsService:
             if not self.spreadsheet:
                 return "Unknown User"
             
-            print(f"DEBUG: Looking for user name for user_id: {user_id}")
             
             # Try User_Profiles first, then User_Info as fallback
             for sheet_name in ["User_Profiles", "User_Info"]:
@@ -431,10 +430,8 @@ class SheetsService:
                     worksheet = self.spreadsheet.worksheet(sheet_name)
                     records = worksheet.get_all_records()
                     
-                    print(f"DEBUG: Found {len(records)} records in {sheet_name}")
                     
                     for i, record in enumerate(records):
-                        print(f"DEBUG: Record {i}: {record}")
                         
                         # Check both userId and UserId fields - handle case variations
                         record_user_id = (record.get('userId') or record.get('UserId') or 
@@ -446,7 +443,6 @@ class SheetsService:
                                   record.get('UserName') or record.get('username'))
                             
                             if name:
-                                print(f"DEBUG: Found user name: {name} for user {user_id}")
                                 return name
                             
                             # Fallback to firstName + lastName
@@ -454,15 +450,12 @@ class SheetsService:
                             last_name = record.get('lastName', '') or record.get('LastName', '')
                             full_name = f"{first_name} {last_name}".strip()
                             if full_name:
-                                print(f"DEBUG: Found full name: {full_name} for user {user_id}")
                                 return full_name
                     
                     break  # If we found the sheet, don't try the fallback
                 except Exception as e:
-                    print(f"DEBUG: Sheet {sheet_name} not found or error: {e}")
                     continue
             
-            print(f"DEBUG: No user found with ID: {user_id}")
             return "Unknown User"
             
         except Exception as e:

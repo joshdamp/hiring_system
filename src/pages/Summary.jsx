@@ -43,7 +43,7 @@ function Summary() {
       actions.setSummary('initial', summaryData.summary);
     } catch (error) {
       console.error('Error loading summary:', error);
-      setError('Failed to generate your talent summary. Please try again.');
+      setError('Failed to generate your mirror assessment summary. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -127,20 +127,20 @@ function Summary() {
                 Initial Assessment Complete!
               </Typography>
               <Typography variant="body1" color="text.secondary">
-                Based on your responses, we've created your initial talent profile.
+                Based on your responses, we've created your initial mirror assessment profile.
               </Typography>
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Talent Summary */}
+        {/* Mirror Assessment Summary */}
         <motion.div variants={itemVariants}>
           <Card sx={{ mb: 4, borderRadius: 3, boxShadow: 3 }}>
             <CardContent sx={{ p: 4 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <AssessmentOutlined sx={{ fontSize: 24, color: 'primary.main', mr: 2 }} />
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  Your Talent Profile
+                  Your Mirror Assessment Profile
                 </Typography>
               </Box>
               

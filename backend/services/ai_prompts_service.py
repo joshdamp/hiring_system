@@ -78,12 +78,12 @@ if you're ready, then give me the questions.
 # System prompt for AI analysis
 def get_system_prompt():
     """Returns the complete system prompt for AI analysis"""
-    return """You are a professional personality assessment specialist with expertise in natural talent and strength identification. 
+    return """You are a professional personality assessment specialist with expertise in natural mirror assessment and strength identification. 
 
-Your role is to help individuals discover their unique combination of talents and strengths through a systematic assessment process. You analyze responses to provide clear, practical insights about natural patterns of thinking, feeling, and behaving.
+Your role is to help individuals discover their unique combination of strengths and mirror aspects through a systematic assessment process. You analyze responses to provide clear, practical insights about natural patterns of thinking, feeling, and behaving.
 
 ASSESSMENT FRAMEWORK:
-You work with 34 distinct talent themes organized into 4 domains:
+You work with 34 distinct mirror assessment themes organized into 4 domains:
 - Executing: Getting things done efficiently and reliably
 - Influencing: Taking charge and motivating others to action  
 - Relationship Building: Connecting with and caring for others
@@ -120,35 +120,34 @@ CHAPTER 2: BEHAVIORAL TRUTH - Situational Decision Making
 
 PURPOSE: After Chapter 1 gives us a baseline of natural tendencies, Chapter 2 reveals how someone actually behaves in real situations. This helps solve contradictions and solidify the strength profile by seeing which traits someone actually uses when under pressure.
 
-QUESTION FORMAT:
-- 13 situational questions
-- Each has 4 specific choices (A, B, C, D)
-- User must select FIRST choice (most likely action) and SECOND choice (next most likely)
-- First choice gets weight 2, second choice gets weight 1 for scoring
+CRITICAL JSON REQUIREMENTS - READ CAREFULLY:
+1. Return ONLY a valid JSON array - NEVER multiple arrays
+2. NEVER use markdown blocks, NEVER use ```json formatting
+3. NEVER add explanatory text before or after the JSON
+4. The response must start with [ and end with ]
+5. All 13 questions must be in ONE SINGLE ARRAY
+6. Each question MUST have exactly: "QuestionID", "Prompt", "Type", "Option1", "Option2", "Option3", "Option4"
+7. "Type" must always be "multiple_choice"
+8. All text must be plain text only, properly escaped quotes
+9. NO line breaks within option text, NO **, NO [], NO links
 
-SCORING LOGIC:
-- Each choice maps to specific traits
-- First choice traits get +2 points each
-- Second choice traits get +1 point each
-- Unselected choices get 0 points
+WRONG FORMAT (DO NOT USE):
+[{{"QuestionID":"Q2-1",...}}]
+[{{"QuestionID":"Q2-2",...}}]
+
+CORRECT FORMAT (USE THIS):
+[{{"QuestionID":"Q2-1",...}},{{"QuestionID":"Q2-2",...}},{{"QuestionID":"Q2-3",...}}...{{"QuestionID":"Q2-13",...}}]
 
 QUESTION REQUIREMENTS:
-1. Specific, realistic scenarios that happen in work/life
+1. Specific, realistic workplace scenarios
 2. Each choice clearly maps to different trait combinations
 3. NO vague scenarios that could apply to multiple traits
 4. Focus on natural first instincts, not ideal responses
 5. Test for false-truth distinctions between similar traits
+6. NO parentheses with trait names in options
+7. Keep option text concise and clear
 
-EXAMPLE:
-Question: "You just got praise for a group project, but someone was left out. What's your first instinct?"
-A. Celebrate and motivate the team more
-B. Make sure the left-out person feels seen
-C. Reflect on what systems failed and fix it
-D. Clarify roles so it doesn't happen again
-
-IMPORTANT: Do NOT include trait names in parentheses in the options. Only provide the action/behavior text.
-
-Generate 13 questions following this exact format. Return as JSON array with fields: QuestionID, Prompt, Type: "multiple_choice", Option1, Option2, Option3, Option4"""
+Generate exactly 13 questions in ONE SINGLE JSON ARRAY. Return ONLY the JSON array with no additional text, formatting, or commentary. Start your response with [ and end with ]."""
 
 def get_chapter_3_generation_prompt(chapter_1_results, chapter_2_results):
     """Generate Chapter 3 questions based on previous chapters"""
@@ -161,10 +160,17 @@ CHAPTER 3: DEPTH ANALYSIS - Perception & Motivation Patterns
 
 PURPOSE: While Chapter 1 shows subconscious patterns and Chapter 2 shows behavioral responses, Chapter 3 explores how someone perceives and processes experiences. This finalizes the strength profile by addressing contradictions between earlier chapters and adding clarity to motivations.
 
-QUESTION FORMAT:
-- 7 in-depth, open-ended questions
-- Focus on perception patterns, stress responses, feedback processing, happiness triggers
-- Designed to reveal deeper motivational patterns and validate trait rankings
+CRITICAL FORMAT REQUIREMENTS:
+1. Generate exactly 7 open-ended questions
+2. Format as simple Q1:, Q2:, Q3:, etc.
+3. DO NOT use JSON format for Chapter 3
+4. DO NOT include "Prompt": or any JSON syntax
+5. Each question should be a direct, clear question ending with ?
+
+CORRECT FORMAT:
+Q1: Think of a time when you received difficult feedback. Walk me through how you processed it internally - what went through your mind first, how did it affect you, and what did you do with that information?
+
+Q2: Describe a project or task that completely absorbed you, making time disappear. What specific aspects aligned with your interests and skills?
 
 QUESTION REQUIREMENTS:
 1. Explore HOW someone perceives situations, not just what they do
@@ -182,10 +188,7 @@ AREAS TO EXPLORE:
 - What frustrates them most
 - How they define success
 
-EXAMPLE QUESTION TYPES:
-"Think of a time when you received difficult feedback. Walk me through how you processed it internally - what went through your mind first, how did it affect you, and what did you do with that information?"
-
-Generate 7 questions following this format. Return as JSON array with fields: QuestionID, Prompt, Type: "open_ended" """
+Generate exactly 7 questions using the Q1:, Q2:, Q3: format. No JSON, no "Prompt":, just direct questions."""
 
 # The 34 core strengths organized by domain
 CLIFTON_STRENGTHS = {

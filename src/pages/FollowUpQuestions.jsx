@@ -64,6 +64,16 @@ function FollowUpQuestions({ round = 1 }) {
       console.log('Follow-up questions data:', questionsData);
       setQuestions(questionsData);
       actions.setQuestions(`followUp${round}`, questionsData);
+      
+      // Reset question index when new questions are loaded
+      setCurrentQuestionIndex(0);
+      
+      // Reset response states for new round
+      setResponses({});
+      if (round === 1) {
+        setFirstChoices({});
+        setSecondChoices({});
+      }
     } catch (error) {
       console.error('Error loading follow-up questions:', error);
       setError('Failed to load personalized questions. Please try again.');

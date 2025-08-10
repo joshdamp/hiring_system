@@ -86,7 +86,6 @@ class AssessmentService:
     async def generate_follow_up_questions(self, user_id: str, round_num: int) -> List[Dict[str, Any]]:
         """Generate personalized follow-up questions"""
         try:
-            print(f"DEBUG: Assessment service generating follow-up questions for {user_id}, round {round_num}")
             
             # Get previous responses
             if round_num == 1:
@@ -96,24 +95,19 @@ class AssessmentService:
             
             # Get current trait rankings
             trait_rankings = self.user_trait_rankings.get(user_id, {})
-            print(f"DEBUG: Retrieved trait rankings for {user_id}: {len(trait_rankings)} traits")
-            print(f"DEBUG: Previous responses count: {len(previous_responses)}")
             
             # If no trait rankings in memory, try to regenerate from initial responses
             if not trait_rankings and round_num == 1:
-                print(f"DEBUG: No trait rankings in memory, regenerating from initial responses")
                 initial_responses = await self.sheets_service.get_user_responses(user_id, "User_Responses")
                 if initial_responses:
                     trait_rankings = await self.ai_service.analyze_trait_rankings(initial_responses)
                     self.user_trait_rankings[user_id] = trait_rankings
-                    print(f"DEBUG: Regenerated {len(trait_rankings)} trait rankings")
             
             # Generate questions using LLM
             questions = await self.ai_service.generate_follow_up_questions(
                 user_id, trait_rankings, previous_responses, round_num
             )
             
-            print(f"DEBUG: Generated {len(questions)} questions")
             
             # Save questions to Google Sheets
             await self.sheets_service.save_follow_up_questions(user_id, questions, round_num)

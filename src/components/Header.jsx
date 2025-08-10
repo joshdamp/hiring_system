@@ -48,7 +48,7 @@ function Header() {
                 fontSize: '0.9rem',
               }}
             >
-              Professional Talent Assessment
+              Professional Mirror Assessment
             </Typography>
           </Box>
         </motion.div>

@@ -96,7 +96,7 @@ async def get_fixed_questions():
 # Also add endpoint without /api prefix for frontend compatibility
 @app.get("/questions/fixed")
 async def get_fixed_questions_alt():
-    """Get all fixed talent assessment questions (alternative endpoint)"""
+    """Get all fixed mirror assessment questions (alternative endpoint)"""
     return await get_fixed_questions()
 
 @app.post("/questions/follow-up/{round}")
@@ -127,8 +127,6 @@ async def get_follow_up_questions(round: int, request: FollowUpQuestionsRequest)
 async def submit_initial_responses(request: InitialResponsesRequest):
     """Submit initial assessment responses"""
     try:
-        print(f"DEBUG: Received initial responses for user {request.userId}")
-        print(f"DEBUG: Number of responses: {len(request.responses)}")
         result = await assessment_service.submit_initial_responses(
             request.userId, request.responses
         )
@@ -143,15 +141,8 @@ async def submit_initial_responses(request: InitialResponsesRequest):
 async def submit_follow_up_responses(round: int, request: FollowUpResponsesRequest):
     """Submit follow-up responses"""
     try:
-        print(f"DEBUG: Received follow-up responses for round {round}")
-        print(f"DEBUG: Request data: userId={request.userId}, responses count={len(request.responses)}")
-        
         if round not in [1, 2]:
             raise HTTPException(status_code=400, detail="Round must be 1 or 2")
-        
-        # Debug the first response structure
-        if request.responses:
-            print(f"DEBUG: First response structure: {request.responses[0].__dict__ if hasattr(request.responses[0], '__dict__') else request.responses[0]}")
         
         result = await assessment_service.submit_follow_up_responses(
             request.userId, request.responses, round
@@ -165,7 +156,6 @@ async def submit_follow_up_responses(round: int, request: FollowUpResponsesReque
 async def get_initial_summary(user_id: str):
     """Get initial personality summary"""
     try:
-        print(f"DEBUG: Generating initial summary for user {user_id}")
         summary = await assessment_service.generate_initial_summary(user_id)
         return {"summary": summary}
     except Exception as e:
@@ -214,44 +204,6 @@ async def calculate_match_score(request: MatchingRequest):
         return {"matchScore": match_score}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/test-sheets")
-async def test_sheets_connection():
-    """Test Google Sheets connection"""
-    try:
-        # Test if sheets service is working
-        test_data = {
-            "userId": "test-user-123",
-            "name": "Test User",
-            "age": 25,
-            "experience": 3,
-            "consent": True,
-            "timestamp": datetime.now().isoformat()
-        }
-        
-        # List available worksheets
-        worksheets = []
-        if sheets_service.spreadsheet:
-            try:
-                worksheets = [ws.title for ws in sheets_service.spreadsheet.worksheets()]
-            except Exception as e:
-                worksheets = [f"Error getting worksheets: {e}"]
-        
-        result = await sheets_service.save_user_info(test_data)
-        
-        return {
-            "status": "success" if result else "mock",
-            "message": "Google Sheets connection tested",
-            "sheets_connected": sheets_service.spreadsheet is not None,
-            "available_worksheets": worksheets,
-            "test_data_saved": result
-        }
-    except Exception as e:
-        return {
-            "status": "error",
-            "message": str(e),
-            "sheets_connected": False
-        }
 
 # Error handlers
 @app.exception_handler(HTTPException)

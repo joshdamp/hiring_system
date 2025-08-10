@@ -27,7 +27,7 @@ function Landing() {
     {
       icon: <PsychologyOutlined sx={{ fontSize: 40 }} />,
       title: 'AI-Powered Assessment',
-      description: 'Advanced talent evaluation using machine learning algorithms',
+      description: 'Advanced mirror assessment evaluation using machine learning algorithms',
     },
     {
       icon: <PersonOutlined sx={{ fontSize: 40 }} />,
@@ -108,7 +108,7 @@ function Landing() {
               sx={{ mb: 4, maxWidth: '700px', mx: 'auto', fontSize: '1.25rem' }}
             >
               Discover your unique professional profile through our advanced
-              talent assessment powered by artificial intelligence.
+              mirror assessment powered by artificial intelligence.
             </Typography>
             <Button
               variant="contained"
@@ -254,7 +254,7 @@ function Landing() {
                     Step 2
                   </Typography>
                   <Typography variant="body2">
-                    Complete initial talent assessment
+                    Complete initial mirror assessment
                   </Typography>
                 </Box>
               </Grid>

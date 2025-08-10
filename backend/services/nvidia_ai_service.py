@@ -111,12 +111,22 @@ class NvidiaAIService:
         }
         
         try:
-            response = requests.post(self.base_url, json=payload, headers=headers, timeout=60)
+            response = requests.post(self.base_url, json=payload, headers=headers, timeout=90)
             response.raise_for_status()
             
             result = response.json()
             if 'choices' in result and len(result['choices']) > 0:
-                return result['choices'][0]['message']['content']
+                content = result['choices'][0]['message']['content']
+                print(f"DEBUG: API returned {len(content)} characters")
+                
+                # Check if response was truncated
+                finish_reason = result['choices'][0].get('finish_reason', 'unknown')
+                if finish_reason == 'length':
+                    print(f"WARNING: API response was truncated due to length limit")
+                elif finish_reason != 'stop':
+                    print(f"WARNING: API response finished with reason: {finish_reason}")
+                
+                return content
             else:
                 print(f"Unexpected API response format: {result}")
                 return None
@@ -128,6 +138,75 @@ class NvidiaAIService:
             print(f"Error processing NVIDIA response: {e}")
             return None
     
+    def _extract_rankings_from_response(self, response: str) -> Dict[str, int]:
+        """Enhanced JSON extraction with multiple fallback strategies"""
+        import re
+        
+        try:
+            # Strategy 1: Direct JSON parsing
+            try:
+                return json.loads(response)
+            except json.JSONDecodeError:
+                pass
+            
+            # Strategy 2: Extract JSON with regex and clean it
+            json_match = re.search(r'\{.*\}', response, re.DOTALL)
+            if json_match:
+                json_str = json_match.group()
+                print(f"DEBUG: Extracted JSON: {json_str[:500]}...")
+                
+                # Clean the JSON string to remove comments and fix formatting issues
+                json_str = self._clean_json_string(json_str)
+                
+                try:
+                    rankings = json.loads(json_str)
+                    print(f"Parsed trait rankings: {len(rankings)} traits found")
+                    return rankings
+                except json.JSONDecodeError as e:
+                    print(f"JSON parsing error after cleaning: {e}")
+                    
+            # Strategy 3: Manual extraction of trait:value pairs
+            trait_pattern = r'"?([A-Za-z\-]+)"?\s*:\s*(\d+)'
+            matches = re.findall(trait_pattern, response)
+            if matches:
+                rankings = {}
+                for trait, value in matches:
+                    if trait in self.all_traits:
+                        rankings[trait] = int(value)
+                print(f"Manual extraction found {len(rankings)} valid traits")
+                if len(rankings) >= 20:  # Accept if we got most traits
+                    return rankings
+                    
+            print("DEBUG: All JSON extraction strategies failed")
+            return None
+            
+        except Exception as e:
+            print(f"Error in _extract_rankings_from_response: {e}")
+            return None
+    
+    def _clean_json_string(self, json_str: str) -> str:
+        """Clean JSON string to remove comments and fix common formatting issues"""
+        import re
+        
+        # Remove comments in parentheses
+        json_str = re.sub(r'\([^)]*\)', '', json_str)
+        
+        # Remove lines that start with comments or explanations
+        lines = json_str.split('\n')
+        cleaned_lines = []
+        for line in lines:
+            # Skip lines that are clearly comments or explanations
+            if not line.strip().startswith(('*', '-', 'Note:', 'Explanation:', '//')):
+                cleaned_lines.append(line)
+        json_str = '\n'.join(cleaned_lines)
+        
+        # Fix common JSON issues
+        json_str = re.sub(r',\s*}', '}', json_str)  # Remove trailing commas
+        json_str = re.sub(r',\s*]', ']', json_str)  # Remove trailing commas in arrays
+        json_str = re.sub(r'"\s*,\s*"', '", "', json_str)  # Fix quote spacing
+        
+        return json_str
+
     def _get_fallback_rankings(self) -> Dict[str, int]:
         """Generate fallback rankings using enhanced randomization"""
         print("DEBUG: Using fallback rankings due to AI analysis failure")
@@ -161,7 +240,7 @@ class NvidiaAIService:
         print(f"DEBUG: Analyzing {len(responses)} responses with NVIDIA AI")
         
         if not responses:
-            return self._generate_fallback_rankings()
+            return self._get_fallback_rankings()
         
         # Prepare response data for analysis
         response_data = []
@@ -207,57 +286,22 @@ Example: {{"Achiever": 1, "Strategic": 2, "Empathy": 3, ...}}
             print(f"AI Response for trait analysis: {response[:500]}...")
             
             if response:
-                # Extract JSON from response
-                import re
-                json_match = re.search(r'\{.*\}', response, re.DOTALL)
-                if json_match:
-                    json_str = json_match.group()
-                    print(f"DEBUG: Extracted JSON: {json_str[:500]}...")
-                    
-                    rankings = json.loads(json_str)
-                    print(f"Parsed trait rankings: {len(rankings)} traits found")
-                    
+                # Enhanced JSON extraction with multiple fallback strategies
+                rankings = self._extract_rankings_from_response(response)
+                if rankings:
                     # Enhanced validation of AI rankings
                     if self._validate_ai_rankings(rankings):
                         return rankings
                     else:
                         print("DEBUG: AI rankings failed validation, using fallback")
-                        return self._generate_fallback_rankings()
+                        return self._get_fallback_rankings()
                 else:
                     print("DEBUG: No valid JSON found in AI response")
-                    return self._generate_fallback_rankings()
+                    return self._get_fallback_rankings()
                 
         except Exception as e:
             print(f"Error parsing rankings: {e}")
-            return self._generate_fallback_rankings()
-            print("DEBUG: Making API call for trait analysis...")
-            response = self._make_api_call(messages, max_tokens=800, temperature=0.3)
-            print(f"AI Response for trait analysis: {response[:500]}...")
-            
-            # Extract JSON from response
-            json_start = response.find('{')
-            json_end = response.rfind('}') + 1
-            
-            if json_start != -1 and json_end != -1:
-                json_str = response[json_start:json_end]
-                print(f"DEBUG: Extracted JSON: {json_str[:500]}...")
-                
-                rankings = json.loads(json_str)
-                print(f"Parsed trait rankings: {len(rankings)} traits found")
-                
-                # Enhanced validation of AI rankings
-                if self._validate_ai_rankings(rankings):
-                    return rankings
-                else:
-                    print("DEBUG: AI rankings failed validation, using fallback")
-                    return self._generate_fallback_rankings()
-            else:
-                print("DEBUG: No valid JSON found in AI response")
-                return self._generate_fallback_rankings()
-                
-        except Exception as e:
-            print(f"Error parsing rankings: {e}")
-            return self._generate_fallback_rankings()
+            return self._get_fallback_rankings()
 
     async def analyze_initial_responses(self, responses: List[Dict[str, Any]], 
                                      questions: List[Dict[str, Any]]) -> Dict[str, int]:
@@ -266,7 +310,7 @@ Example: {{"Achiever": 1, "Strategic": 2, "Empathy": 3, ...}}
         """
         try:
             if not self.api_key:
-                return self._generate_fallback_rankings()
+                return self._get_fallback_rankings()
             
             print(f"DEBUG: Analyzing {len(responses)} responses with NVIDIA AI")
             
@@ -357,11 +401,11 @@ Analyze the responses carefully to determine which traits are strongest based on
             
             # Fallback if AI analysis fails
             print(f"DEBUG: Using fallback rankings due to NVIDIA AI analysis failure")
-            return self._generate_fallback_rankings()
+            return self._get_fallback_rankings()
             
         except Exception as e:
             print(f"Error in analyze_initial_responses: {e}")
-            return self._generate_fallback_rankings()
+            return self._get_fallback_rankings()
     
     def _validate_ai_rankings(self, rankings: Dict[str, int]) -> bool:
         """Enhanced validation to detect poor AI analysis"""
@@ -414,6 +458,30 @@ Analyze the responses carefully to determine which traits are strongest based on
         print("DEBUG: AI rankings passed validation")
         return True
 
+    def _validate_rankings(self, rankings: Dict[str, int]) -> bool:
+        """Validate trait rankings"""
+        if not rankings:
+            print("DEBUG: Empty rankings")
+            return False
+        
+        # Check if all traits are present
+        missing_traits = set(self.all_traits) - set(rankings.keys())
+        if missing_traits:
+            print(f"DEBUG: Missing traits: {missing_traits}")
+            return False
+        
+        # Check ranking values
+        rank_values = list(rankings.values())
+        expected_ranks = set(range(1, 35))
+        actual_ranks = set(rank_values)
+        
+        if actual_ranks != expected_ranks:
+            print(f"DEBUG: Invalid rank values. Expected 1-34, got: {sorted(actual_ranks)}")
+            return False
+        
+        print("DEBUG: Rankings validation passed")
+        return True
+
     async def generate_follow_up_questions(self, user_id: str, trait_rankings: Dict[str, int], 
                                    previous_responses: List[Dict[str, Any]], round_num: int) -> List[Dict[str, Any]]:
         """
@@ -448,16 +516,25 @@ Analyze the responses carefully to determine which traits are strongest based on
         
         print(f"DEBUG: Top traits for Chapter 2: {top_trait_names}")
         
-        prompt = get_chapter_2_generation_prompt(top_trait_names)
+        base_prompt = get_chapter_2_generation_prompt(top_trait_names)
+        
+        # Add extra instructions to ensure proper JSON format
+        enhanced_prompt = f"""{base_prompt}
+
+CRITICAL: Your response must be EXACTLY in this format with no additional text:
+[{{"QuestionID":"Q2-1","Prompt":"Your question here","Type":"multiple_choice","Option1":"Option A","Option2":"Option B","Option3":"Option C","Option4":"Option D"}},{{"QuestionID":"Q2-2","Prompt":"Your question here","Type":"multiple_choice","Option1":"Option A","Option2":"Option B","Option3":"Option C","Option4":"Option D"}},...,{{"QuestionID":"Q2-13","Prompt":"Your question here","Type":"multiple_choice","Option1":"Option A","Option2":"Option B","Option3":"Option C","Option4":"Option D"}}]
+
+Do not include any text before the [ or after the ]. Return only the JSON array."""
         
         messages = [
             {"role": "system", "content": self.system_prompt},
-            {"role": "user", "content": prompt}
+            {"role": "user", "content": enhanced_prompt}
         ]
         
         try:
             print("DEBUG: Making API call for Chapter 2...")
-            response = self._make_api_call(messages, max_tokens=1500, temperature=0.7)
+            # Increase max_tokens to ensure full response and reduce temperature for more consistent format
+            response = self._make_api_call(messages, max_tokens=3000, temperature=0.3)
             print(f"DEBUG: API response length: {len(response)}")
             print(f"DEBUG: First 500 chars of response: {response[:500]}")
             
@@ -531,154 +608,187 @@ Analyze the responses carefully to determine which traits are strongest based on
             return self._generate_fallback_chapter_3_questions(top_trait_names, 7)
 
     def _parse_chapter_2_questions(self, response: str) -> List[Dict[str, Any]]:
-        """Parse Chapter 2 questions from AI response"""
+        """Parse Chapter 2 questions from AI response with robust JSON handling"""
         print(f"DEBUG: Parsing AI response for Chapter 2 questions")
         print(f"DEBUG: Response preview: {response[:500]}...")
         
         questions = []
         
         try:
-            # Try to extract JSON from the response - more robust extraction
-            import re
-            import json
+            # Strategy 1: Direct JSON parsing
+            response_clean = response.strip()
             
-            # First try to find JSON array
-            json_match = re.search(r'\[.*?\]', response, re.DOTALL)
-            if json_match:
-                json_str = json_match.group()
-                print(f"DEBUG: Extracted JSON: {json_str[:300]}...")
-                
-                # Clean up any malformed JSON (like underscores, dashes, malformed brackets)
-                json_str = re.sub(r'_(["\w]+)_', r'\1', json_str)  # Remove underscores around words
-                json_str = re.sub(r'"_([^"]*?)_"', r'"\1"', json_str)  # Remove underscores inside quotes
-                json_str = re.sub(r'-([A-Z])', r'\1', json_str)  # Remove dashes before capital letters
-                json_str = re.sub(r'"-([^"]*?)"', r'"\1"', json_str)  # Remove dashes at start of quotes
-                json_str = re.sub(r'"\}:', r'",', json_str)  # Fix malformed bracket-colon combinations
-                json_str = re.sub(r'"\}', r'"', json_str)  # Fix malformed end brackets
-                json_str = re.sub(r'Option4"\}:', r'"Option4":', json_str)  # Fix specific malformed pattern
-                
-                # Fix common JSON formatting issues
-                json_str = re.sub(r',\s*\]', ']', json_str)  # Remove trailing commas before array close
-                json_str = re.sub(r',\s*\}', '}', json_str)  # Remove trailing commas before object close
-                
-                try:
-                    raw_questions = json.loads(json_str)
-                    print(f"DEBUG: Parsed {len(raw_questions)} raw questions from JSON")
-                    
-                    # Convert to our expected format
-                    for i, q in enumerate(raw_questions):
-                        if isinstance(q, dict):
-                            formatted_question = {
-                                'QuestionID': f'Q{i+1}',
-                                'QuestionText': q.get('Prompt', '').strip(),
-                                'type': 'dual_choice',
-                                'optionA': q.get('Option1', '').strip(),
-                                'optionB': q.get('Option2', '').strip(),
-                                'optionC': q.get('Option3', '').strip(),
-                                'optionD': q.get('Option4', '').strip()
-                            }
-                            
-                            # Validate that all required fields are present and non-empty
-                            if all(formatted_question[key] for key in ['QuestionText', 'optionA', 'optionB', 'optionC', 'optionD']):
-                                questions.append(formatted_question)
-                                print(f"DEBUG: Added valid question {i+1}: {formatted_question['QuestionText'][:50]}...")
-                            else:
-                                print(f"DEBUG: Skipped invalid question {i+1}: missing required fields")
-                    
-                    print(f"DEBUG: Successfully parsed {len(questions)} valid questions from JSON")
+            # Remove markdown code blocks if present
+            if response_clean.startswith('```json'):
+                response_clean = response_clean[7:].strip()
+            elif response_clean.startswith('```'):
+                response_clean = response_clean[3:].strip()
+            if response_clean.endswith('```'):
+                response_clean = response_clean[:-3].strip()
+            
+            try:
+                raw_questions = json.loads(response_clean)
+                print(f"DEBUG: Direct JSON parsing successful: {len(raw_questions)} questions")
+                questions = self._format_chapter_2_questions(raw_questions)
+                if questions:
                     return questions
                     
-                except json.JSONDecodeError as e:
-                    print(f"DEBUG: JSON parsing failed after cleanup: {e}")
-                    # Try a more aggressive cleanup
-                    lines = json_str.split('\n')
-                    cleaned_lines = []
-                    for line in lines:
-                        # Remove lines with malformed formatting
-                        if not ('_' in line and ':' not in line):
-                            cleaned_lines.append(line)
-                    
-                    cleaned_json = '\n'.join(cleaned_lines)
-                    try:
-                        raw_questions = json.loads(cleaned_json)
-                        print(f"DEBUG: Successfully parsed after aggressive cleanup: {len(raw_questions)} questions")
-                        
-                        # Convert to our expected format
-                        for i, q in enumerate(raw_questions):
-                            if isinstance(q, dict):
-                                formatted_question = {
-                                    'QuestionID': f'Q{i+1}',
-                                    'QuestionText': q.get('Prompt', '').strip(),
-                                    'type': 'dual_choice',
-                                    'optionA': q.get('Option1', '').strip(),
-                                    'optionB': q.get('Option2', '').strip(),
-                                    'optionC': q.get('Option3', '').strip(),
-                                    'optionD': q.get('Option4', '').strip()
-                                }
-                                
-                                if all(formatted_question[key] for key in ['QuestionText', 'optionA', 'optionB', 'optionC', 'optionD']):
-                                    questions.append(formatted_question)
-                                    print(f"DEBUG: Added valid question {i+1}: {formatted_question['QuestionText'][:50]}...")
-                        
-                        print(f"DEBUG: Successfully parsed {len(questions)} valid questions after cleanup")
-                        return questions
-                        
-                    except json.JSONDecodeError as e2:
-                        print(f"DEBUG: Even aggressive cleanup failed: {e2}")
-                        # Fall through to line-by-line parsing
+            except json.JSONDecodeError as e:
+                print(f"DEBUG: Direct JSON parsing failed: {e}")
                 
+                # Strategy 2: Extract JSON array from response
+                start_idx = response_clean.find('[')
+                if start_idx >= 0:
+                    # Find the matching closing bracket
+                    bracket_count = 0
+                    end_idx = -1
+                    
+                    for i in range(start_idx, len(response_clean)):
+                        if response_clean[i] == '[':
+                            bracket_count += 1
+                        elif response_clean[i] == ']':
+                            bracket_count -= 1
+                            if bracket_count == 0:
+                                end_idx = i + 1
+                                break
+                    
+                    if end_idx > start_idx:
+                        json_part = response_clean[start_idx:end_idx]
+                        print(f"DEBUG: Extracted JSON array: {json_part[:200]}...")
+                        
+                        try:
+                            raw_questions = json.loads(json_part)
+                            print(f"DEBUG: Extracted JSON parsing successful: {len(raw_questions)} questions")
+                            questions = self._format_chapter_2_questions(raw_questions)
+                            if questions:
+                                return questions
+                                
+                        except json.JSONDecodeError as e2:
+                            print(f"DEBUG: Extracted JSON parsing failed: {e2}")
+                            
+                            # Strategy 3: Fix common JSON issues and try again
+                            fixed_json = self._fix_malformed_json(json_part)
+                            if fixed_json:
+                                try:
+                                    raw_questions = json.loads(fixed_json)
+                                    print(f"DEBUG: Fixed JSON parsing successful: {len(raw_questions)} questions")
+                                    questions = self._format_chapter_2_questions(raw_questions)
+                                    if questions:
+                                        return questions
+                                except json.JSONDecodeError as e3:
+                                    print(f"DEBUG: Fixed JSON parsing also failed: {e3}")
+                
+                # Strategy 4: Parse individual question objects from text
+                questions = self._parse_questions_from_text(response_clean)
+                if questions:
+                    print(f"DEBUG: Text parsing successful: {len(questions)} questions")
+                    return questions
+                        
         except Exception as e:
-            print(f"DEBUG: JSON parsing failed: {e}")
-            print(f"DEBUG: Falling back to line-by-line parsing")
+            print(f"DEBUG: JSON parsing failed with exception: {e}")
+            import traceback
+            traceback.print_exc()
         
-        # Fallback to line-by-line parsing if JSON parsing fails
-        lines = response.strip().split('\n')
-        current_question = {}
+        print(f"DEBUG: All parsing strategies failed, returning empty list")
+        return questions
+
+    def _format_chapter_2_questions(self, raw_questions: List[Dict]) -> List[Dict[str, Any]]:
+        """Format raw question data into expected format"""
+        questions = []
         
-        for line in lines:
-            line = line.strip()
-            if not line:
+        if not isinstance(raw_questions, list):
+            print(f"DEBUG: Expected list, got {type(raw_questions)}")
+            return questions
+            
+        for i, q in enumerate(raw_questions):
+            if not isinstance(q, dict):
+                print(f"DEBUG: Question {i+1} is not a dict: {type(q)}")
                 continue
                 
-            print(f"DEBUG: Processing line: {line[:100]}...")
-                
-            if line.startswith('Q') and ':' in line:
-                if current_question and 'question' in current_question:
-                    questions.append(current_question)
-                
-                question_text = line.split(':', 1)[1].strip()
-                current_question = {
-                    'questionId': f'Q{len(questions) + 1}',
-                    'question': question_text,
-                    'type': 'dual_choice'
-                }
-                print(f"DEBUG: Found question: {question_text[:50]}...")
-            elif line.startswith('A)') or line.startswith('A.'):
-                current_question['optionA'] = line[2:].strip()
-                print(f"DEBUG: Found option A: {line[2:].strip()[:30]}...")
-            elif line.startswith('B)') or line.startswith('B.'):
-                current_question['optionB'] = line[2:].strip()
-            elif line.startswith('C)') or line.startswith('C.'):
-                current_question['optionC'] = line[2:].strip()
-            elif line.startswith('D)') or line.startswith('D.'):
-                current_question['optionD'] = line[2:].strip()
-        
-        # Add the last question if it exists
-        if current_question and 'question' in current_question:
-            questions.append(current_question)
-        
-        print(f"DEBUG: Parsed {len(questions)} raw questions")
-        
-        # Validate questions have all required fields
-        valid_questions = []
-        for q in questions:
-            if all(key in q for key in ['question', 'optionA', 'optionB', 'optionC', 'optionD']):
-                valid_questions.append(q)
+            formatted_question = {
+                'QuestionID': q.get('QuestionID', f'Q{i+1}'),
+                'QuestionText': q.get('Prompt', '').strip(),
+                'Prompt': q.get('Prompt', '').strip(),
+                'Type': 'multiple_choice',
+                'Option1': q.get('Option1', '').strip(),
+                'Option2': q.get('Option2', '').strip(),
+                'Option3': q.get('Option3', '').strip(),
+                'Option4': q.get('Option4', '').strip()
+            }
+            
+            # Validate that all required fields are present and non-empty
+            if all(formatted_question[key] for key in ['QuestionText', 'Option1', 'Option2', 'Option3', 'Option4']):
+                questions.append(formatted_question)
+                print(f"DEBUG: Added valid question {i+1}: {formatted_question['QuestionText'][:50]}...")
             else:
-                print(f"DEBUG: Invalid question missing fields: {list(q.keys())}")
+                missing_fields = [key for key in ['QuestionText', 'Option1', 'Option2', 'Option3', 'Option4'] 
+                                if not formatted_question[key]]
+                print(f"DEBUG: Skipped invalid question {i+1}: missing {missing_fields}")
         
-        print(f"DEBUG: {len(valid_questions)} valid questions after validation")
-        return valid_questions
+        print(f"DEBUG: Successfully formatted {len(questions)} valid questions from JSON")
+        return questions
+
+    def _fix_malformed_json(self, json_text: str) -> str:
+        """Attempt to fix common JSON syntax issues"""
+        try:
+            # Remove trailing commas before closing brackets/braces
+            fixed = re.sub(r',(\s*[}\]])', r'\1', json_text)
+            
+            # Fix missing quotes around keys (basic attempt)
+            fixed = re.sub(r'(\w+):', r'"\1":', fixed)
+            
+            # Fix unescaped quotes in strings (basic attempt)
+            # This is tricky and might not work for all cases
+            
+            # Ensure the JSON is properly terminated
+            if not fixed.strip().endswith(']'):
+                # Try to close the array properly
+                last_brace = fixed.rfind('}')
+                if last_brace > 0:
+                    fixed = fixed[:last_brace+1] + ']'
+            
+            print(f"DEBUG: Attempting to fix JSON: {fixed[:200]}...")
+            return fixed
+            
+        except Exception as e:
+            print(f"DEBUG: Failed to fix JSON: {e}")
+            return None
+
+    def _parse_questions_from_text(self, text: str) -> List[Dict[str, Any]]:
+        """Parse questions from malformed or partial text response"""
+        questions = []
+        
+        try:
+            # Look for question patterns in the text
+            # This is a fallback method for when JSON parsing completely fails
+            
+            # Try to find individual question objects with regex
+            question_pattern = r'\{\s*"QuestionID"\s*:\s*"([^"]+)"\s*,\s*"Prompt"\s*:\s*"([^"]+)"\s*,.*?"Option1"\s*:\s*"([^"]+)"\s*,\s*"Option2"\s*:\s*"([^"]+)"\s*,\s*"Option3"\s*:\s*"([^"]+)"\s*,\s*"Option4"\s*:\s*"([^"]+)"\s*[,}]'
+            
+            matches = re.findall(question_pattern, text, re.DOTALL)
+            print(f"DEBUG: Found {len(matches)} question patterns in text")
+            
+            for i, match in enumerate(matches):
+                if len(match) >= 6:
+                    question = {
+                        'QuestionID': match[0] or f'Q{i+1}',
+                        'QuestionText': match[1].strip(),
+                        'Prompt': match[1].strip(),
+                        'Type': 'multiple_choice',
+                        'Option1': match[2].strip(),
+                        'Option2': match[3].strip(),
+                        'Option3': match[4].strip(),
+                        'Option4': match[5].strip()
+                    }
+                    
+                    if all(question[key] for key in ['QuestionText', 'Option1', 'Option2', 'Option3', 'Option4']):
+                        questions.append(question)
+                        print(f"DEBUG: Extracted question {i+1}: {question['QuestionText'][:50]}...")
+            
+        except Exception as e:
+            print(f"DEBUG: Text parsing failed: {e}")
+            
+        return questions
 
     def _parse_chapter_3_questions(self, response: str) -> List[Dict[str, Any]]:
         """Parse Chapter 3 questions from AI response"""
@@ -703,9 +813,10 @@ Analyze the responses carefully to determine which traits are strongest based on
             
             if question_text and len(question_text) > 10:
                 questions.append({
-                    'questionId': f'Q{num}',
-                    'question': question_text,
-                    'type': 'open_ended'
+                    'QuestionID': f'Q{num}',
+                    'QuestionText': question_text,
+                    'Prompt': question_text,
+                    'Type': 'open_ended'
                 })
                 print(f"DEBUG: Added question {num}: {question_text[:50]}...")
         
@@ -725,6 +836,23 @@ Analyze the responses carefully to determine which traits are strongest based on
                 if any(skip in line.lower() for skip in skip_words):
                     continue
                 
+                # Clean up malformed "Prompt": format
+                if '"Prompt":' in line:
+                    # Extract the actual question from "Prompt": "question text",
+                    prompt_match = re.search(r'"Prompt":\s*"([^"]+)"', line)
+                    if prompt_match:
+                        cleaned_question = prompt_match.group(1).strip()
+                        if len(cleaned_question) > 15:
+                            questions.append({
+                                'QuestionID': f'Q{question_count}',
+                                'QuestionText': cleaned_question,
+                                'Prompt': cleaned_question,
+                                'Type': 'open_ended'
+                            })
+                            print(f"DEBUG: Added parsed question: {cleaned_question[:50]}...")
+                            question_count += 1
+                    continue
+                
                 # Look for question-like content
                 if (len(line) > 20 and 
                     (line.endswith('?') or 
@@ -738,9 +866,10 @@ Analyze the responses carefully to determine which traits are strongest based on
                     
                     if len(cleaned_line) > 15:
                         questions.append({
-                            'questionId': f'Q{question_count}',
-                            'question': cleaned_line,
-                            'type': 'open_ended'
+                            'QuestionID': f'Q{question_count}',
+                            'QuestionText': cleaned_line,
+                            'Prompt': cleaned_line,
+                            'Type': 'open_ended'
                         })
                         question_count += 1
                         print(f"DEBUG: Added parsed question: {cleaned_line[:50]}...")
@@ -757,110 +886,122 @@ Analyze the responses carefully to determine which traits are strongest based on
             {
                 'QuestionID': 'Q1',
                 'QuestionText': 'Your team missed an important deadline and stakeholders are frustrated. What\'s your immediate response?',
-                'optionA': 'Take charge and create a recovery plan with clear next steps',
-                'optionB': 'Analyze what went wrong to prevent future issues',
-                'optionC': 'Focus on maintaining team morale and motivation',
-                'optionD': 'Ensure everyone understands their responsibilities moving forward',
-                'type': 'dual_choice'
+                'Prompt': 'Your team missed an important deadline and stakeholders are frustrated. What\'s your immediate response?',
+                'Type': 'multiple_choice',
+                'Option1': 'Take charge and create a recovery plan with clear next steps',
+                'Option2': 'Analyze what went wrong to prevent future issues',
+                'Option3': 'Focus on maintaining team morale and motivation',
+                'Option4': 'Ensure everyone understands their responsibilities moving forward'
             },
             {
                 'QuestionID': 'Q2',
                 'QuestionText': 'You discover a colleague is struggling with their workload but hasn\'t asked for help. What do you do?',
-                'optionA': 'Offer specific assistance with tasks you can handle',
-                'optionB': 'Help them organize and prioritize their workload',
-                'optionC': 'Connect them with others who might provide support',
-                'optionD': 'Encourage them to communicate their needs to management',
-                'type': 'dual_choice'
+                'Prompt': 'You discover a colleague is struggling with their workload but hasn\'t asked for help. What do you do?',
+                'Type': 'multiple_choice',
+                'Option1': 'Offer specific assistance with tasks you can handle',
+                'Option2': 'Help them organize and prioritize their workload',
+                'Option3': 'Connect them with others who might provide support',
+                'Option4': 'Encourage them to communicate their needs to management'
             },
             {
                 'QuestionID': 'Q3',
                 'QuestionText': 'During a brainstorming session, the discussion becomes chaotic with too many ideas. How do you respond?',
-                'optionA': 'Suggest a structured approach to evaluate each idea',
-                'optionB': 'Build on the most promising ideas to develop them further',
-                'optionC': 'Help synthesize different viewpoints into cohesive themes',
-                'optionD': 'Focus the group on ideas that align with strategic goals',
-                'type': 'dual_choice'
+                'Prompt': 'During a brainstorming session, the discussion becomes chaotic with too many ideas. How do you respond?',
+                'Type': 'multiple_choice',
+                'Option1': 'Suggest a structured approach to evaluate each idea',
+                'Option2': 'Build on the most promising ideas to develop them further',
+                'Option3': 'Help synthesize different viewpoints into cohesive themes',
+                'Option4': 'Focus the group on ideas that align with strategic goals'
             },
             {
                 'QuestionID': 'Q4',
                 'QuestionText': 'You\'re assigned to lead a project with team members you\'ve never worked with before. What\'s your first priority?',
-                'optionA': 'Establish clear roles, responsibilities, and timelines',
-                'optionB': 'Get to know each person\'s strengths and working style',
-                'optionC': 'Create opportunities for the team to build relationships',
-                'optionD': 'Define the project vision and success metrics',
-                'type': 'dual_choice'
+                'Prompt': 'You\'re assigned to lead a project with team members you\'ve never worked with before. What\'s your first priority?',
+                'Type': 'multiple_choice',
+                'Option1': 'Establish clear roles, responsibilities, and timelines',
+                'Option2': 'Get to know each person\'s strengths and working style',
+                'Option3': 'Create opportunities for the team to build relationships',
+                'Option4': 'Define the project vision and success metrics'
             },
             {
                 'QuestionID': 'Q5',
                 'QuestionText': 'A long-standing company process is inefficient, but changing it would disrupt many people. What do you do?',
-                'optionA': 'Research and present data supporting the need for change',
-                'optionB': 'Gradually implement small improvements to minimize disruption',
-                'optionC': 'Build consensus by involving stakeholders in the solution',
-                'optionD': 'Focus on training people to work more effectively within the current system',
-                'type': 'dual_choice'
+                'Prompt': 'A long-standing company process is inefficient, but changing it would disrupt many people. What do you do?',
+                'Type': 'multiple_choice',
+                'Option1': 'Research and present data supporting the need for change',
+                'Option2': 'Gradually implement small improvements to minimize disruption',
+                'Option3': 'Build consensus by involving stakeholders in the solution',
+                'Option4': 'Focus on training people to work more effectively within the current system'
             },
             {
                 'QuestionID': 'Q6',
                 'QuestionText': 'You receive harsh criticism about your work in front of your peers. How do you handle it?',
-                'optionA': 'Stay calm and ask clarifying questions to understand the specific issues',
-                'optionB': 'Thank them for the feedback and discuss how to improve privately',
-                'optionC': 'Address any valid points while professionally defending your approach',
-                'optionD': 'Focus on what you can learn and how to apply it going forward',
-                'type': 'dual_choice'
+                'Prompt': 'You receive harsh criticism about your work in front of your peers. How do you handle it?',
+                'Type': 'multiple_choice',
+                'Option1': 'Stay calm and ask clarifying questions to understand the specific issues',
+                'Option2': 'Thank them for the feedback and discuss how to improve privately',
+                'Option3': 'Address any valid points while professionally defending your approach',
+                'Option4': 'Focus on what you can learn and how to apply it going forward'
             },
             {
                 'QuestionID': 'Q7',
                 'QuestionText': 'Your team is celebrating a major win, but you notice the success was largely due to one person\'s efforts. What do you do?',
-                'optionA': 'Make sure that person gets proper recognition for their contribution',
-                'optionB': 'Use this as a learning opportunity to improve team collaboration',
-                'optionC': 'Celebrate the team while privately acknowledging the key contributor',
-                'optionD': 'Focus on how to replicate this success in future projects',
-                'type': 'dual_choice'
+                'Prompt': 'Your team is celebrating a major win, but you notice the success was largely due to one person\'s efforts. What do you do?',
+                'Type': 'multiple_choice',
+                'Option1': 'Make sure that person gets proper recognition for their contribution',
+                'Option2': 'Use this as a learning opportunity to improve team collaboration',
+                'Option3': 'Celebrate the team while privately acknowledging the key contributor',
+                'Option4': 'Focus on how to replicate this success in future projects'
             },
             {
                 'QuestionID': 'Q8',
                 'QuestionText': 'You\'re in a meeting where a controversial decision needs to be made quickly. How do you contribute?',
-                'optionA': 'Present the facts and logical implications of each option',
-                'optionB': 'Advocate strongly for the option you believe is best',
-                'optionC': 'Help the group find common ground and areas of agreement',
-                'optionD': 'Ask questions to ensure all perspectives are considered',
-                'type': 'dual_choice'
+                'Prompt': 'You\'re in a meeting where a controversial decision needs to be made quickly. How do you contribute?',
+                'Type': 'multiple_choice',
+                'Option1': 'Present the facts and logical implications of each option',
+                'Option2': 'Advocate strongly for the option you believe is best',
+                'Option3': 'Help the group find common ground and areas of agreement',
+                'Option4': 'Ask questions to ensure all perspectives are considered'
             },
             {
                 'QuestionID': 'Q9',
                 'QuestionText': 'A new team member seems hesitant to participate in discussions and appears overwhelmed. What\'s your approach?',
-                'optionA': 'Give them specific, manageable tasks to build their confidence',
-                'optionB': 'Spend time one-on-one understanding their concerns and background',
-                'optionC': 'Include them directly in conversations and actively seek their input',
-                'optionD': 'Connect them with resources and people who can help them succeed',
-                'type': 'dual_choice'
+                'Prompt': 'A new team member seems hesitant to participate in discussions and appears overwhelmed. What\'s your approach?',
+                'Type': 'multiple_choice',
+                'Option1': 'Give them specific, manageable tasks to build their confidence',
+                'Option2': 'Spend time one-on-one understanding their concerns and background',
+                'Option3': 'Include them directly in conversations and actively seek their input',
+                'Option4': 'Connect them with resources and people who can help them succeed'
             },
             {
                 'QuestionID': 'Q10',
                 'QuestionText': 'Your organization is implementing a major change that you disagree with. How do you respond?',
-                'optionA': 'Voice your concerns through proper channels with supporting evidence',
-                'optionB': 'Focus on helping your team adapt and find opportunities within the change',
-                'optionC': 'Work to understand the reasoning behind the decision',
-                'optionD': 'Commit to making the change successful despite your reservations',
-                'type': 'dual_choice'
+                'Prompt': 'Your organization is implementing a major change that you disagree with. How do you respond?',
+                'Type': 'multiple_choice',
+                'Option1': 'Voice your concerns through proper channels with supporting evidence',
+                'Option2': 'Focus on helping your team adapt and find opportunities within the change',
+                'Option3': 'Work to understand the reasoning behind the decision',
+                'Option4': 'Commit to making the change successful despite your reservations'
             },
             {
                 'QuestionID': 'Q11',
                 'QuestionText': 'You have multiple high-priority projects with competing deadlines. How do you handle this situation?',
-                'optionA': 'Create a detailed schedule and systematically work through each task',
-                'optionB': 'Negotiate with stakeholders to adjust expectations and timelines',
-                'optionC': 'Focus intensely on one project at a time to ensure quality',
-                'optionD': 'Identify which projects will have the greatest impact and prioritize accordingly',
-                'type': 'dual_choice'
+                'Prompt': 'You have multiple high-priority projects with competing deadlines. How do you handle this situation?',
+                'Type': 'multiple_choice',
+                'Option1': 'Create a detailed schedule and systematically work through each task',
+                'Option2': 'Negotiate with stakeholders to adjust expectations and timelines',
+                'Option3': 'Focus intensely on one project at a time to ensure quality',
+                'Option4': 'Identify which projects will have the greatest impact and prioritize accordingly'
             },
             {
                 'QuestionID': 'Q12',
                 'QuestionText': 'During a team presentation, a colleague makes a factual error that could mislead the audience. What do you do?',
-                'optionA': 'Politely correct the information immediately to prevent confusion',
-                'optionB': 'Make a note to address it privately with your colleague afterward',
-                'optionC': 'Find a diplomatic way to introduce the correct information',
-                'optionD': 'Support your colleague publicly and clarify details in follow-up communication',
-                'type': 'dual_choice'
+                'Prompt': 'During a team presentation, a colleague makes a factual error that could mislead the audience. What do you do?',
+                'Type': 'multiple_choice',
+                'Option1': 'Politely correct the information immediately to prevent confusion',
+                'Option2': 'Make a note to address it privately with your colleague afterward',
+                'Option3': 'Find a diplomatic way to introduce the correct information',
+                'Option4': 'Support your colleague publicly and clarify details in follow-up communication'
             }
         ]
         
@@ -882,9 +1023,10 @@ Analyze the responses carefully to determine which traits are strongest based on
         
         for i in range(min(count, len(base_questions))):
             fallback_questions.append({
-                'questionId': str(i + 1),
-                'question': base_questions[i],
-                'type': 'open_ended'
+                'QuestionID': f'Q{i + 1}',
+                'QuestionText': base_questions[i],
+                'Prompt': base_questions[i],
+                'Type': 'open_ended'
             })
         
         return fallback_questions
@@ -1090,23 +1232,49 @@ Analyze the responses carefully to determine which traits are strongest based on
             import json
             import re
             
-            # Try to extract JSON from the response
-            json_match = re.search(r'\{.*\}', response, re.DOTALL)
-            if json_match:
-                json_str = json_match.group()
-                rankings = json.loads(json_str)
-                
-                # Convert to proper format if needed
+            print(f"DEBUG: Parsing response: {response[:300]}...")
+            
+            # Try direct JSON parsing first
+            try:
+                rankings = json.loads(response.strip())
                 if isinstance(rankings, dict):
-                    # Ensure all values are integers
                     cleaned_rankings = {}
                     for trait, rank in rankings.items():
                         try:
                             cleaned_rankings[trait] = int(rank)
                         except (ValueError, TypeError):
                             continue
+                    print(f"DEBUG: Direct JSON parsing successful: {len(cleaned_rankings)} traits")
                     return cleaned_rankings
+            except json.JSONDecodeError as e:
+                print(f"DEBUG: Direct JSON parsing failed: {e}")
             
+            # Try to extract JSON from the response
+            json_match = re.search(r'\{.*\}', response, re.DOTALL)
+            if json_match:
+                json_str = json_match.group()
+                print(f"DEBUG: Extracted JSON: {json_str[:200]}...")
+                
+                # Clean common JSON issues
+                json_str = json_str.replace('\n', ' ')  # Remove newlines
+                json_str = re.sub(r',\s*}', '}', json_str)  # Remove trailing commas
+                json_str = re.sub(r',\s*]', ']', json_str)  # Remove trailing commas in arrays
+                
+                try:
+                    rankings = json.loads(json_str)
+                    if isinstance(rankings, dict):
+                        cleaned_rankings = {}
+                        for trait, rank in rankings.items():
+                            try:
+                                cleaned_rankings[trait] = int(rank)
+                            except (ValueError, TypeError):
+                                continue
+                        print(f"DEBUG: Cleaned JSON parsing successful: {len(cleaned_rankings)} traits")
+                        return cleaned_rankings
+                except json.JSONDecodeError as e2:
+                    print(f"DEBUG: Cleaned JSON parsing also failed: {e2}")
+            
+            print("DEBUG: No valid JSON found in response")
             return {}
         except Exception as e:
             print(f"Error parsing trait rankings: {e}")
