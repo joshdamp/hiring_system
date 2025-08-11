@@ -1202,9 +1202,14 @@ Do not include any text before the [ or after the ]. Return only the JSON array.
         2. New insights that might elevate certain traits
         3. Evidence that some traits might be less prominent
         
-        Return ONLY a JSON object with trait rankings 1-34.
-        Format: {{"TraitName": ranking_number, ...}}
-        """
+        CRITICAL JSON REQUIREMENTS:
+        - Return ONLY a valid JSON object with ALL 34 traits ranked 1-34
+        - NO comments, NO explanatory text, NO // or /* */ comments
+        - Use exact trait names: Achiever, Activator, Adaptability, Analytical, Arranger, Belief, Command, Communication, Competition, Connectedness, Consistency, Context, Deliberative, Developer, Discipline, Empathy, Focus, Futuristic, Harmony, Ideation, Includer, Individualization, Input, Intellection, Learner, Maximizer, Positivity, Relator, Responsibility, Restorative, Self-Assurance, Significance, Strategic, Woo
+        
+        Format: {{"Achiever": 1, "Activator": 2, "Adaptability": 3, ...}}
+        
+        Return ONLY the JSON object with no additional text."""
         
         messages = [
             {"role": "system", "content": self.system_prompt},
@@ -1255,10 +1260,15 @@ Do not include any text before the [ or after the ]. Return only the JSON array.
                 json_str = json_match.group()
                 print(f"DEBUG: Extracted JSON: {json_str[:200]}...")
                 
-                # Clean common JSON issues
+                # Clean common JSON issues including comments
                 json_str = json_str.replace('\n', ' ')  # Remove newlines
+                json_str = re.sub(r'//[^\r\n]*', '', json_str)  # Remove // comments
+                json_str = re.sub(r'/\*.*?\*/', '', json_str, flags=re.DOTALL)  # Remove /* */ comments
                 json_str = re.sub(r',\s*}', '}', json_str)  # Remove trailing commas
                 json_str = re.sub(r',\s*]', ']', json_str)  # Remove trailing commas in arrays
+                json_str = re.sub(r'\s+', ' ', json_str)  # Normalize whitespace
+                
+                print(f"DEBUG: Cleaned JSON (first 200 chars): {json_str[:200]}...")
                 
                 try:
                     rankings = json.loads(json_str)
@@ -1273,6 +1283,7 @@ Do not include any text before the [ or after the ]. Return only the JSON array.
                         return cleaned_rankings
                 except json.JSONDecodeError as e2:
                     print(f"DEBUG: Cleaned JSON parsing also failed: {e2}")
+                    print(f"DEBUG: Final cleaned JSON: {json_str}")
             
             print("DEBUG: No valid JSON found in response")
             return {}

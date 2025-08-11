@@ -164,6 +164,12 @@ async def get_initial_summary(user_id: str):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+# Alias route without /api prefix for production compatibility
+@app.get("/summary/initial/{user_id}")
+async def get_initial_summary_alias(user_id: str):
+    """Get initial personality summary - alias route"""
+    return await get_initial_summary(user_id)
+
 @app.get("/api/summary/follow-up/{user_id}/{round}")
 async def get_follow_up_summary(user_id: str, round: int):
     """Get follow-up summary after each round"""
@@ -176,6 +182,12 @@ async def get_follow_up_summary(user_id: str, round: int):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# Alias route without /api prefix for production compatibility
+@app.get("/summary/follow-up/{user_id}/{round}")
+async def get_follow_up_summary_alias(user_id: str, round: int):
+    """Get follow-up summary after each round - alias route"""
+    return await get_follow_up_summary(user_id, round)
+
 @app.get("/api/summary/final/{user_id}")
 async def get_final_summary(user_id: str):
     """Get final comprehensive personality summary"""
@@ -185,6 +197,12 @@ async def get_final_summary(user_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# Alias route without /api prefix for production compatibility
+@app.get("/summary/final/{user_id}")
+async def get_final_summary_alias(user_id: str):
+    """Get final comprehensive personality summary - alias route"""
+    return await get_final_summary(user_id)
+
 @app.get("/api/results/{user_id}")
 async def get_final_results(user_id: str):
     """Get final trait rankings and complete results"""
@@ -193,6 +211,12 @@ async def get_final_results(user_id: str):
         return results
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# Alias route without /api prefix for production compatibility
+@app.get("/results/{user_id}")
+async def get_final_results_alias(user_id: str):
+    """Get final trait rankings and complete results - alias route"""
+    return await get_final_results(user_id)
 
 @app.post("/api/matching/calculate")
 async def calculate_match_score(request: MatchingRequest):
