@@ -322,14 +322,18 @@ class SheetsService:
                 worksheet = self.spreadsheet.worksheet(sheet_name)
             except:
                 worksheet = self.spreadsheet.add_worksheet(title=sheet_name, rows=1000, cols=10)
-                worksheet.append_row(["UserID", "Name", "QuestionID", "QuestionText"])
+                worksheet.append_row(["UserID", "Name", "QuestionID", "QuestionText", "OptionA", "OptionB", "OptionC", "OptionD"])
             
             for question in questions:
                 row_data = [
                     user_id,                                                    # UserId
                     user_name,                                                  # UserName  
                     question.get('questionId', question.get('QuestionID', '')), # QuestionID
-                    question.get('question', question.get('Prompt', question.get('QuestionText', '')))  # QuestionText
+                    question.get('question', question.get('Prompt', question.get('QuestionText', ''))),  # QuestionText
+                    question.get('Option1', ''),                               # OptionA
+                    question.get('Option2', ''),                               # OptionB
+                    question.get('Option3', ''),                               # OptionC
+                    question.get('Option4', '')                                # OptionD
                 ]
                 worksheet.append_row(row_data)
                 await asyncio.sleep(0.5)

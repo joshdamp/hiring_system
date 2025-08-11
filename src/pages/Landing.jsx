@@ -100,7 +100,8 @@ function Landing() {
                 fontFamily: '"Playfair Display", Georgia, serif',
               }}
             >
-              Welcome to future of hiring -- Welcome to Dampil's self-identity mirror.
+              Welcome to future of Hiring 
+              Welcome to Dampil's self-identity mirror.
             </Typography>
             <Typography
               variant="h5"
