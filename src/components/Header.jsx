@@ -22,7 +22,7 @@ function Header() {
           style={{ display: 'flex', alignItems: 'center', gap: '16px' }}
         >
           <PsychologyOutlined sx={{ fontSize: 36, color: '#d4af37' }} />
-          <Box>
+          <Box sx={{ textAlign: 'center' }}>
             <Typography 
               variant="h5" 
               component="h1" 
@@ -35,6 +35,7 @@ function Header() {
                 backgroundClip: 'text',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
+                textAlign: 'center',
               }}
             >
               Hiring initial screening

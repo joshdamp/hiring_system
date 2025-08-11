@@ -96,12 +96,27 @@ function Landing() {
                 backgroundClip: 'text',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
-                mb: 3,
+                mb: 2,
                 fontFamily: '"Playfair Display", Georgia, serif',
               }}
             >
-              Welcome to future of Hiring 
-              Welcome to Dampil's self-identity mirror.
+              Welcome to future of Hiring
+            </Typography>
+            <Typography
+              variant="h4"
+              component="h2"
+              sx={{
+                fontWeight: 500,
+                background: 'linear-gradient(135deg, #d4af37 0%, #f4e4a1 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                mb: 3,
+                fontFamily: '"Playfair Display", Georgia, serif',
+                textAlign: 'center',
+              }}
+            >
+              Welcome to Dampil's self-identity mirror
             </Typography>
             <Typography
               variant="h5"
