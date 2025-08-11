@@ -210,16 +210,7 @@ function InitialAssessment() {
                 color="primary"
                 variant="outlined"
               />
-              <Chip
-                label={currentQuestion?.Theme || 'Unknown'}
-                sx={{ 
-                  backgroundColor: themeColor, 
-                  color: '#ffffff',
-                  fontWeight: 'bold',
-                  border: '2px solid',
-                  borderColor: 'rgba(255,255,255,0.3)'
-                }}
-              />
+              {/* Category chip removed for first 20 questions as requested */}
             </Box>
           </Box>
           

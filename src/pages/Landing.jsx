@@ -26,8 +26,8 @@ function Landing() {
   const features = [
     {
       icon: <PsychologyOutlined sx={{ fontSize: 40 }} />,
-      title: 'AI-Powered Assessment',
-      description: 'Advanced mirror assessment evaluation using machine learning algorithms',
+      title: 'Identity Clarity',
+      description: 'You\'ll never get to know yourself more, unless you\'ll look into your mirror. This assessment is your mirror.',
     },
     {
       icon: <PersonOutlined sx={{ fontSize: 40 }} />,
@@ -100,15 +100,14 @@ function Landing() {
                 fontFamily: '"Playfair Display", Georgia, serif',
               }}
             >
-              Welcome to the Future of Hiring
+              Welcome to future of hiring -- Welcome to Dampil's self-identity mirror.
             </Typography>
             <Typography
               variant="h5"
               color="text.secondary"
               sx={{ mb: 4, maxWidth: '700px', mx: 'auto', fontSize: '1.25rem' }}
             >
-              Discover your unique professional profile through our advanced
-              mirror assessment powered by artificial intelligence.
+              Discover what makes you unique in this world! See the advanced guide on how you'll thrive in both career, and in life.
             </Typography>
             <Button
               variant="contained"
@@ -132,7 +131,7 @@ function Landing() {
                 },
               }}
             >
-              Start Your Assessment
+              START YOUR ASSESSMENT
             </Button>
           </Box>
         </motion.div>
@@ -151,7 +150,7 @@ function Landing() {
               fontFamily: '"Playfair Display", Georgia, serif',
             }}
           >
-            Why Choose Our Assessment Platform?
+            Why Choose Our Identity Mirror Platform?
           </Typography>
           <Grid container spacing={4} sx={{ mb: 8 }}>
             {features.map((feature, index) => (
@@ -235,7 +234,7 @@ function Landing() {
               gutterBottom
               sx={{ mb: 4, fontWeight: 600 }}
             >
-              Assessment Process
+              Identity Mirror Process
             </Typography>
             <Grid container spacing={3}>
               <Grid item xs={12} sm={6} md={3}>

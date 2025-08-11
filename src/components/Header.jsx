@@ -37,7 +37,7 @@ function Header() {
                 WebkitTextFillColor: 'transparent',
               }}
             >
-              Automated Hiring System
+              Hiring initial screening
             </Typography>
             <Typography 
               variant="body2" 
@@ -48,7 +48,7 @@ function Header() {
                 fontSize: '0.9rem',
               }}
             >
-              Professional Mirror Assessment
+              a personalized assessment designed to see where you'll thrive
             </Typography>
           </Box>
         </motion.div>
