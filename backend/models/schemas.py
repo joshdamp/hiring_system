@@ -5,15 +5,19 @@ from datetime import datetime
 # User models
 class UserCreate(BaseModel):
     name: str = Field(..., min_length=2, max_length=100)
+    email: str = Field(..., pattern=r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
     age: int = Field(..., ge=18, le=100)
     experience: int = Field(..., ge=0, le=50)
+    phone: str = Field(..., min_length=10, max_length=15)
     consent: bool = Field(..., description="Data processing consent")
 
 class UserResponse(BaseModel):
     userId: str
     name: str
+    email: str
     age: int
     experience: int
+    phone: str
     consent: bool
     timestamp: str
 

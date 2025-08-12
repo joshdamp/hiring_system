@@ -23,8 +23,10 @@ class AssessmentService:
             user_dict = {
                 'userId': user_id,
                 'name': user_data.name,
+                'email': user_data.email,
                 'age': user_data.age,
                 'experience': user_data.experience,
+                'phone': user_data.phone,
                 'consent': user_data.consent,
                 'timestamp': datetime.now().isoformat()
             }
@@ -36,8 +38,10 @@ class AssessmentService:
             return UserResponse(
                 userId=user_id,
                 name=user_data.name,
+                email=user_data.email,
                 age=user_data.age,
                 experience=user_data.experience,
+                phone=user_data.phone,
                 consent=user_data.consent,
                 timestamp=datetime.now().isoformat()
             )

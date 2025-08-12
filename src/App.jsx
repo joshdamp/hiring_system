@@ -19,7 +19,7 @@ import LoadingPage from './components/LoadingPage';
 // Context
 import { UserProvider } from './context/UserContext';
 
-// Modern Black/Gold/White Theme
+// Modern Black/Gold/Beige/Brown Theme
 const theme = createTheme({
   palette: {
     mode: 'dark',
@@ -30,27 +30,27 @@ const theme = createTheme({
       contrastText: '#0a0a0a',
     },
     secondary: {
-      main: '#1a1a1a',
-      light: '#2a2a2a',
-      dark: '#0a0a0a',
-      contrastText: '#ffffff',
+      main: '#8b4513',
+      light: '#a0522d',
+      dark: '#654321',
+      contrastText: '#f5f5dc',
     },
     background: {
       default: '#0a0a0a',
-      paper: 'rgba(26, 26, 26, 0.8)',
+      paper: 'rgba(26, 26, 26, 0.9)',
     },
     text: {
-      primary: '#ffffff',
-      secondary: '#e8e8e8',
+      primary: '#f5f5dc',
+      secondary: '#e8e2d5',
     },
     success: {
       main: '#d4af37',
     },
     error: {
-      main: '#ff6b6b',
+      main: '#dc3545',
     },
     warning: {
-      main: '#f59e0b',
+      main: '#d2b48c',
     },
     info: {
       main: '#d4af37',

@@ -21,7 +21,7 @@ function Footer() {
           align="center"
           sx={{ opacity: 0.7 }}
         >
-          © 2025 Automated Hiring System. All rights reserved. | Powered by AI & Data Science
+          © 2025 Hiring initial screening. All rights reserved
         </Typography>
       </Container>
     </Box>

@@ -455,20 +455,6 @@ function FollowUpQuestions({ round = 1 }) {
                       );
                     })}
                     
-                    {round === 1 && (
-                      <Box sx={{ 
-                        backgroundColor: 'info.50', 
-                        p: 2, 
-                        borderRadius: 2,
-                        mt: 3,
-                        border: '1px solid',
-                        borderColor: 'info.200'
-                      }}>
-                        <Typography variant="body2" sx={{ color: '#333333', fontWeight: 500 }}>
-                          � <strong>Instructions:</strong> Select TWO choices - your FIRST most likely reaction, then your SECOND most likely reaction. This reveals which strengths you naturally use in real situations.
-                        </Typography>
-                      </Box>
-                    )}
                     
                     <Box sx={{ 
                       backgroundColor: 'grey.50', 

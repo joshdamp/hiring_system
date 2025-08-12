@@ -121,12 +121,14 @@ class SheetsService:
                 else:
                     raise Exception("No worksheets found in spreadsheet")
             
-            # Map to your actual Google Sheets columns: UserID | Name | Age | Experience | Consent | Timestamp
+            # Map to your actual Google Sheets columns: UserID | Name | Email | Age | Experience | Phone | Consent | Timestamp
             row_data = [
                 user_data.get('userId', ''),
                 user_data.get('name', ''),
+                user_data.get('email', ''),
                 user_data.get('age', ''),
                 user_data.get('experience', ''),
+                user_data.get('phone', ''),
                 user_data.get('consent', ''),
                 user_data.get('timestamp', '')
             ]
@@ -466,14 +468,15 @@ class SheetsService:
             print(f"Error getting user name: {e}")
             return "Unknown User"
     
-    async def save_final_results(self, user_id: str, name: str, trait_rankings: Dict[str, int]) -> bool:
-        """Save final trait rankings to Final_Results sheet with all 34 CliftonStrengths"""
+    async def save_final_results(self, user_id: str, name: str, trait_rankings: Dict[str, int], summary_text: str = "") -> bool:
+        """Save final trait rankings and summary to Final_Results sheet with all 34 CliftonStrengths"""
         try:
             await self._rate_limit()
             
             if not self.spreadsheet:
                 print(f"Mock mode: Would save final results for {user_id} - {name}")
                 print(f"Trait rankings: {trait_rankings}")
+                print(f"Summary: {summary_text[:100]}...")
                 return True
             
             worksheet = self.spreadsheet.worksheet("Final_Results")
@@ -489,17 +492,17 @@ class SheetsService:
             try:
                 if not existing_data or (len(existing_data) == 1 and not existing_data[0][0]):
                     # Add headers
-                    headers = ["UserID & Name", "Traits", "Ranking"]
+                    headers = ["UserID & Name", "Traits", "Ranking", "Summary"]
                     worksheet.clear()
                     worksheet.append_row(headers)
             except Exception:
                 # If worksheet doesn't exist or is empty, create headers
-                headers = ["UserID & Name", "Traits", "Ranking"]
+                headers = ["UserID & Name", "Traits", "Ranking", "Summary"]
                 worksheet.clear()
                 worksheet.append_row(headers)
             
-            # Add user info row
-            user_info_row = [f"{user_id} {name}", "", ""]
+            # Add user info row with summary in the last column
+            user_info_row = [f"{user_id} {name}", "", "", summary_text]
             worksheet.append_row(user_info_row)
             
             # Add all 34 traits with their rankings
@@ -517,14 +520,69 @@ class SheetsService:
             # Add each trait with its ranking
             for trait in all_clifton_strengths:
                 ranking = trait_rankings.get(trait, 35)  # Default to 35 if trait not found
-                trait_row = ["", trait, ranking]
+                trait_row = ["", trait, ranking, ""]
                 worksheet.append_row(trait_row)
             
             # Add empty row for separation
-            worksheet.append_row(["", "", ""])
+            worksheet.append_row(["", "", "", ""])
             
             return True
             
         except Exception as e:
             print(f"Error saving final results: {e}")
             return False
+
+    async def get_final_results(self, user_id: str) -> Dict:
+        """Retrieve final results and summary from Final_Results sheet"""
+        try:
+            await self._rate_limit()
+            
+            if not self.spreadsheet:
+                print(f"Mock mode: Would get final results for {user_id}")
+                return None
+            
+            worksheet = self.spreadsheet.worksheet("Final_Results")
+            all_data = worksheet.get_all_values()
+            
+            if not all_data:
+                return None
+            
+            # Find the user's data
+            user_data_start = None
+            for i, row in enumerate(all_data):
+                if row and user_id in str(row[0]):
+                    user_data_start = i
+                    break
+            
+            if user_data_start is None:
+                return None
+            
+            # Extract user info and summary
+            user_row = all_data[user_data_start]
+            user_name = user_row[0].replace(user_id, "").strip()
+            summary_text = user_row[3] if len(user_row) > 3 else ""
+            
+            # Extract trait rankings
+            trait_rankings = {}
+            for i in range(user_data_start + 1, len(all_data)):
+                row = all_data[i]
+                if not row or not row[1]:  # Empty row or no trait name
+                    break
+                if len(row) >= 3 and row[1] and row[2]:
+                    trait_name = row[1].strip()
+                    try:
+                        ranking = int(row[2])
+                        trait_rankings[trait_name] = ranking
+                    except (ValueError, IndexError):
+                        continue
+            
+            return {
+                "user_id": user_id,
+                "user_name": user_name,
+                "trait_rankings": trait_rankings,
+                "summary_text": summary_text
+            }
+            
+        except Exception as e:
+            print(f"Error getting final results: {e}")
+            return None

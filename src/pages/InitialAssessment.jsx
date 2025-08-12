@@ -244,29 +244,9 @@ function InitialAssessment() {
             <Card sx={{ borderRadius: 3, boxShadow: 3 }}>
               <CardContent sx={{ p: 4 }}>
                 
-                {/* Left Statement */}
-                <Box sx={{ mb: 4 }}>
-                  <Typography variant="h6" sx={{ color: '#1976d2', mb: 2 }}>
-                    Statement A:
-                  </Typography>
-                  <Typography variant="body1" sx={{ fontSize: '1.2rem', fontWeight: 500, fontStyle: 'italic' }}>
-                    "{currentQuestion.LeftStatement}"
-                  </Typography>
-                </Box>
-
-                {/* Right Statement */}
-                <Box sx={{ mb: 4 }}>
-                  <Typography variant="h6" sx={{ color: '#dc004e', mb: 2 }}>
-                    Statement B:
-                  </Typography>
-                  <Typography variant="body1" sx={{ fontSize: '1.2rem', fontWeight: 500, fontStyle: 'italic' }}>
-                    "{currentQuestion.RightStatement}"
-                  </Typography>
-                </Box>
-
-                {/* Likert Scale */}
+                {/* Horizontal Likert Scale Layout */}
                 <Paper elevation={2} sx={{ p: 4, bgcolor: '#f8f9fa' }}>
-                  <Typography variant="h6" align="center" sx={{ mb: 3, color: '#333333', fontWeight: 'bold' }}>
+                  <Typography variant="h6" align="center" sx={{ mb: 4, color: '#333333', fontWeight: 'bold' }}>
                     Which statement describes you better?
                   </Typography>
                   
@@ -275,75 +255,77 @@ function InitialAssessment() {
                     onChange={handleResponseChange}
                     sx={{ width: '100%' }}
                   >
-                    <Grid container spacing={1} alignItems="center" justifyContent="center">
-                      {/* Left side labels */}
-                      <Grid item xs={2}>
-                        <Typography variant="body2" align="center" sx={{ color: '#333333', fontWeight: 'bold' }}>
-                          Statement A
-                        </Typography>
-                      </Grid>
-                      
-                      {/* Scale options */}
-                      <Grid item xs={8}>
-                        <Box sx={{ 
-                          display: 'flex', 
-                          justifyContent: 'space-between', 
-                          alignItems: 'center',
-                          px: 2 
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 2
+                    }}>
+                      {/* Left Statement */}
+                      <Box sx={{ flex: '0 0 35%', textAlign: 'left' }}>
+                        <Typography variant="body1" sx={{ 
+                          fontSize: '1rem', 
+                          fontWeight: 500, 
+                          color: '#333333',
+                          fontStyle: 'italic'
                         }}>
-                          {[
-                            { value: '1', label: 'Strongly A' },
-                            { value: '2', label: 'Somewhat A' },
-                            { value: '3', label: 'Neutral' },
-                            { value: '4', label: 'Somewhat B' },
-                            { value: '5', label: 'Strongly B' }
-                          ].map((option) => (
-                            <Box key={option.value} sx={{ textAlign: 'center' }}>
-                              <FormControlLabel
-                                value={option.value}
-                                control={
-                                  <Radio 
-                                    sx={{ 
-                                      color: option.value <= '2' ? '#d4af37' : option.value === '3' ? '#757575' : '#b8941f',
-                                      '&.Mui-checked': {
-                                        color: option.value <= '2' ? '#d4af37' : option.value === '3' ? '#757575' : '#b8941f',
-                                      },
-                                      transform: 'scale(1.3)'
-                                    }} 
-                                  />
-                                }
-                                label=""
-                                sx={{ 
-                                  margin: 0,
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  alignItems: 'center'
-                                }}
-                              />
-                              <Typography 
-                                variant="caption" 
-                                sx={{ 
-                                  mt: 1, 
-                                  display: 'block',
-                                  color: option.value <= '2' ? '#d4af37' : option.value === '3' ? '#757575' : '#b8941f',
-                                  fontWeight: 'bold',
-                                  fontSize: '0.8rem'
-                                }}
-                              >
-                                {option.label}
-                              </Typography>
-                            </Box>
-                          ))}
-                        </Box>
-                      </Grid>
-                      
-                      {/* Right side labels */}
-                      <Grid item xs={2}>
-                        <Typography variant="body2" align="center" sx={{ color: '#333333', fontWeight: 'bold' }}>
-                          Statement B
+                          "{currentQuestion.LeftStatement}"
                         </Typography>
-                      </Grid>
-                    </Grid>
+                      </Box>
+                      
+                      {/* Scale options - Circles */}
+                      <Box sx={{ 
+                        flex: '0 0 30%',
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        px: 1
+                      }}>
+                        {[
+                          { value: '1', position: 'far-left' },
+                          { value: '2', position: 'left' },
+                          { value: '3', position: 'center' },
+                          { value: '4', position: 'right' },
+                          { value: '5', position: 'far-right' }
+                        ].map((option) => (
+                          <FormControlLabel
+                            key={option.value}
+                            value={option.value}
+                            control={
+                              <Radio 
+                                sx={{ 
+                                  color: '#d4af37',
+                                  '&.Mui-checked': {
+                                    color: '#d4af37',
+                                  },
+                                  transform: 'scale(1.4)',
+                                  p: 1
+                                }} 
+                              />
+                            }
+                            label=""
+                            sx={{ 
+                              margin: 0,
+                              '& .MuiFormControlLabel-label': {
+                                display: 'none'
+                              }
+                            }}
+                          />
+                        ))}
+                      </Box>
+                      
+                      {/* Right Statement */}
+                      <Box sx={{ flex: '0 0 35%', textAlign: 'right' }}>
+                        <Typography variant="body1" sx={{ 
+                          fontSize: '1rem', 
+                          fontWeight: 500, 
+                          color: '#333333',
+                          fontStyle: 'italic'
+                        }}>
+                          "{currentQuestion.RightStatement}"
+                        </Typography>
+                      </Box>
+                    </Box>
                   </RadioGroup>
                 </Paper>
 

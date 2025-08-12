@@ -18,6 +18,8 @@ import {
   CakeOutlined,
   WorkOutlined,
   SecurityOutlined,
+  EmailOutlined,
+  PhoneOutlined,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useUser } from '../context/UserContext';
@@ -29,8 +31,10 @@ function UserInfo() {
   const { state, actions } = useUser();
   const [formData, setFormData] = useState({
     name: '',
+    email: '',
     age: '',
     experience: '',
+    phone: '',
     consent: false,
   });
   const [errors, setErrors] = useState({});
@@ -60,6 +64,12 @@ function UserInfo() {
     } else if (formData.name.trim().length < 2) {
       newErrors.name = 'Name must be at least 2 characters';
     }
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
     
     if (!formData.age) {
       newErrors.age = 'Age is required';
@@ -71,6 +81,14 @@ function UserInfo() {
       newErrors.experience = 'Years of experience is required';
     } else if (isNaN(formData.experience) || formData.experience < 0 || formData.experience > 50) {
       newErrors.experience = 'Please enter valid years of experience (0-50)';
+    } else if (parseInt(formData.experience) > parseInt(formData.age)) {
+      newErrors.experience = 'Years of experience cannot be greater than your age';
+    }
+
+    if (!formData.phone.trim()) {
+      newErrors.phone = 'Phone number is required';
+    } else if (!/^\+?[\d\s\-\(\)]{10,15}$/.test(formData.phone.replace(/\s/g, ''))) {
+      newErrors.phone = 'Please enter a valid phone number';
     }
     
     if (!formData.consent) {
@@ -95,8 +113,10 @@ function UserInfo() {
       // Create user in backend
       const userData = {
         name: formData.name.trim(),
+        email: formData.email.trim(),
         age: parseInt(formData.age),
         experience: parseInt(formData.experience),
+        phone: formData.phone.trim(),
         consent: formData.consent,
       };
       
@@ -187,6 +207,26 @@ function UserInfo() {
 
               <TextField
                 fullWidth
+                label="Email Address"
+                type="email"
+                value={formData.email}
+                onChange={handleChange('email')}
+                error={!!errors.email}
+                helperText={errors.email}
+                margin="normal"
+                required
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <EmailOutlined color="action" />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{ mb: 3 }}
+              />
+
+              <TextField
+                fullWidth
                 label="Age"
                 type="number"
                 value={formData.age}
@@ -229,6 +269,26 @@ function UserInfo() {
                 inputProps={{
                   min: 0,
                   max: 50,
+                }}
+                sx={{ mb: 3 }}
+              />
+
+              <TextField
+                fullWidth
+                label="Phone Number"
+                type="tel"
+                value={formData.phone}
+                onChange={handleChange('phone')}
+                error={!!errors.phone}
+                helperText={errors.phone}
+                margin="normal"
+                required
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <PhoneOutlined color="action" />
+                    </InputAdornment>
+                  ),
                 }}
                 sx={{ mb: 3 }}
               />

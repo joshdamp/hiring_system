@@ -191,16 +191,7 @@ function Summary() {
                 This should take about 5-7 minutes.
               </Typography>
               
-              <Box sx={{ display: 'flex', gap: 2, justifyContent: 'space-between' }}>
-                <Button
-                  variant="outlined"
-                  size="large"
-                  onClick={handleSaveAndExit}
-                  sx={{ px: 4 }}
-                >
-                  Save & Exit
-                </Button>
-                
+              <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
                 <Button
                   variant="contained"
                   size="large"

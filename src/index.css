@@ -1,16 +1,20 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap');
 
 :root {
-  /* Color Palette - Black, Gold, White */
+  /* Color Palette - Black Dominant with Gold, Beige, and Brown */
   --primary-black: #0a0a0a;
   --secondary-black: #1a1a1a;
   --tertiary-black: #2a2a2a;
   --primary-gold: #d4af37;
   --secondary-gold: #b8941f;
   --tertiary-gold: #f4e4a1;
-  --primary-white: #ffffff;
-  --secondary-white: #f8f8f8;
-  --tertiary-white: #e8e8e8;
+  --primary-beige: #f5f5dc;
+  --secondary-beige: #e8e2d5;
+  --tertiary-beige: #ddd6c7;
+  --primary-brown: #8b4513;
+  --secondary-brown: #a0522d;
+  --tertiary-brown: #d2b48c;
+  --accent-white: #ffffff;
   
   /* Typography */
   --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -31,10 +35,10 @@
   --radius-xl: 24px;
   
   /* Shadows */
-  --shadow-subtle: 0 2px 8px rgba(0, 0, 0, 0.1);
-  --shadow-medium: 0 4px 20px rgba(0, 0, 0, 0.15);
-  --shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.2);
-  --shadow-gold: 0 4px 20px rgba(212, 175, 55, 0.3);
+  --shadow-subtle: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-medium: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --shadow-gold: 0 4px 20px rgba(212, 175, 55, 0.4);
 }
 
 * {
@@ -46,7 +50,7 @@
 body {
   font-family: var(--font-primary);
   background: linear-gradient(135deg, var(--primary-black) 0%, var(--secondary-black) 100%);
-  color: var(--primary-white);
+  color: var(--primary-beige);
   line-height: 1.6;
   font-weight: 400;
   min-height: 100vh;
@@ -72,7 +76,7 @@ h1 {
 
 h2 {
   font-size: clamp(2rem, 4vw, 3rem);
-  color: var(--primary-white);
+  color: var(--primary-beige);
 }
 
 h3 {
@@ -83,7 +87,7 @@ h3 {
 p {
   font-size: 1.1rem;
   line-height: 1.7;
-  color: var(--tertiary-white);
+  color: var(--secondary-beige);
   margin-bottom: var(--spacing-sm);
 }
 
@@ -169,11 +173,11 @@ p {
 
 /* Input Styles */
 .modern-input {
-  background: rgba(42, 42, 42, 0.8);
-  border: 1px solid rgba(212, 175, 55, 0.3);
+  background: rgba(42, 42, 42, 0.9);
+  border: 1px solid rgba(212, 175, 55, 0.4);
   border-radius: var(--radius-md);
   padding: var(--spacing-sm) var(--spacing-md);
-  color: var(--primary-white);
+  color: var(--primary-beige);
   font-family: var(--font-primary);
   font-size: 1rem;
   transition: all 0.3s ease;
@@ -183,11 +187,11 @@ p {
 .modern-input:focus {
   outline: none;
   border-color: var(--primary-gold);
-  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.3);
 }
 
 .modern-input::placeholder {
-  color: var(--tertiary-white);
+  color: var(--tertiary-beige);
 }
 
 /* Progress Stepper */
