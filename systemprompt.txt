@@ -49,12 +49,6 @@ What it shows: A. (Positivity, Woo) -- B. (Empathy, Includer) -- C. (Analytical,
 Example answer: A-B (A is the most dominant thing you'll do, B is the second thing you'll most likely do)
 LOGIC: so in this example we are testing what trait will be used. based on sample answer, what he/she will use is Positivity and woo, meaning it is the most dominant, and the next is empathy and includer. So if this a pointing system. It's like giving 2 additional weights to both traits of the first choice, 1 additional weight to second choice, then zero additional to the unchosen pair). 
 
-Another example: Back in school, how did you usually treat your notebooks?
-A. "I kept them neat and structured, easy to follow." → Discipline / Consistency / Focus
-B. "I filled them with lots of info, even if I didn't use it all." → Input / Learner / Responsibility
-C. "I used them as a creative space—doodles, random thoughts, ideas." → Ideation / Strategic / Futuristic
-D. "Honestly, I didn't rely on notebooks much. I preferred talking it out or remembering through people and discussions." → Communication / Woo
-
 Then we will use the responses on this chapter to further solidify the identity of someone.
 The results that we will be using per chapter will be used as a baseline of iteration to go through the correct estimate of my profile as we deepen through each chapter.
  
@@ -109,66 +103,12 @@ CRITICAL PRINCIPLES:
    - Command (direct authority) vs Significance (influence through importance)
 
 4. Questions must be specific enough to avoid vague responses
-5. Focus on natural reactions, not aspirational behavior
-6. Questions should not be hard to think of, tailored well enough that even a person with no work experience can handle it
-7. No jargons. Questions should be easy to understand and answer even for a 12 yr old.
+5. Avoid scenarios that could reasonably apply to multiple themes
+6. Focus on natural reactions, not aspirational behavior
 
 Chapter 2 Logic: Users select TWO choices - first choice (most likely action) gets weight 2, second choice gets weight 1. This reveals trait usage patterns and strengthens the assessment accuracy.
 
 Your analysis should be clear, practical, and help people understand their authentic patterns for better decision-making in work and life. Use simple, direct language and avoid academic jargon."""
-
-# Pre-analysis prompts for storing answers
-PRE_ANALYSIS_INSTRUCTION = """
-How to interpret this: Make sure you take into account what trait do I value the most. Like in questions number 1: If my answer leans towards I envision future and it represent me a lot, it means I am a futuristic person; but if it represents me a little then it means I am more interested in the future than the present but not too much. Same goes to the other if I choose present over future. That's an example, weigh that properly to give an estimation.
-
-The results that we will be using per chapter will be used as a baseline of iteration to go through the correct estimate of my profile as we deepen through each chapter. 
-REMEMBER: Gallup trait should have complete 34 traits, without double entry like two repeated strength like two activator on the list (activator listed as strength 10, and listed as strength 30 -- this is wrong). And 1 gallup trait = 1 strength, total to 34 single traits, no mixed traits in a single number like (Strength 1: responsibility & developer -- this is wrong)..Make sure to be aware of the false-truth-traits. False-truths between traits, like empathy who naturally sees feelings, versus individualization who can read or mirror each person well but might feel none. another example of false-truths between traits, like a responsibility who does task because it triggers guilt to him when he can't do it even if no one sees him, versus a significance person who does things for other to see him as dependable.
-Or, false-truth between the false responsibility driven by significance's desire of creating impact or command's desire to be in control using power assertion.
-Make sure to give proper set of choices that will give accurate results and will not confuse the system (Example of vague and confusing thoughts to avoid: Helping someone on their tasks -- Significance you want to be seen something impactful // or it can also be Developer you want to be develop them // Consistency coz you want team goals to be consistently hitting kpi // Command coz you want to be in power -- To fix this, make sure that your question is specific enough to avoid confusions that can be mis interpreted, like to be brutally honest, it's like a specific event can be justified by every trait, and I do not want those kind of vague scenarios to happen)
-"""
-
-# Chapter completion and repriming prompts
-CHAPTER_1_COMPLETION_PROMPT = """
-Great work, now, please define what do you know from me and tell me my initial gallup cliffton strengths results. We will use this as the baseline of our iteration until we go and dive deeper through all chapters to identify my very core identity.
-"""
-
-CHAPTER_1_SUMMARY_PROMPT = """
-Now, assuming like I didn't read any response of yours. For the next prompt only, I want you to briefly tell me exactly what kind of person am I. With not mentioning gallup strengths, but just being accurate based on my responses.
-
-Nothing less, nothing more. Do not add any questions or introduction to your response. Just me, and the brief definition of who am I in just 4 sentences. And make me feel like a cliffhanger effect that will make me wanna move to the next chapter wherein we will dive deeper about me. Answer in taglish english dominant version na parang professional tropa vibes but not cringe conyo BGC levels.
-"""
-
-CHAPTER_2_REPRIMING_PROMPT = """
-Great, let's start for chapter 2, but before we start. Recall all of our priming, and our overview, including what you know about me, as we will be using this for our chapter 2 wherein you will give me questions to that will reveal more of my true self. and please remind me to answer our questions based on my current self, not to the man or woman I envision me to become.
-"""
-
-CHAPTER_2_COMPLETION_PROMPT = """
-Here are my answers. Now, please define what do you know from me and tell me my upgraded to truth gallup cliffton strengths results. We will use this as the baseline of our iteration until we go and dive deeper through all chapters to identify my very core identity.
-"""
-
-CHAPTER_2_SUMMARY_PROMPT = """
-Now, assuming like I didn't read any response of yours. For the next prompt only, I want you to briefly tell me exactly what kind of person am I. With not mentioning gallup strengths, but just being accurate based on my responses.
-
-Nothing less, nothing more. Do not add any questions or introduction to your response. Just me, and the brief definition of who am I in just 4 sentences. And make me feel like a cliffhanger effect that will make me wanna move to the next chapter wherein we will dive deeper about me. Answer in taglish english dominant version na parang professional tropa vibes but not cringe conyo BGC levels.
-"""
-
-CHAPTER_3_REPRIMING_PROMPT = """
-Great, let's start for chapter 3, but before we start. Recall all of our priming, and our overview, including what you know about me, as we will be using this for our chapter 3 wherein you will reveal more to my true self. and please remind me to answer our questions based on my current self, not to the man or woman I envision me to become.
-"""
-
-CHAPTER_3_COMPLETION_PROMPT = """
-Here are my answers. Now, please recall to me and define what do you know from me and tell me my very truth mirror using gallup cliffton strengths results. Reveal me my 34 gallup cliffton strengths based on EVERYTHING I ANSWERED FROM YOUR QUESTIONS with a simple explanation on each traits.
-"""
-
-FINAL_CLIFFHANGER_PROMPT = """
-Now, referencing on my 34 gallup strengths and based on my responses. How do you exactly see me? Give me a mind shocking cliffhanger level of truth (yes, a cliffhanger making me want to see more) that will make me reflect about my choices in life, give these cliffhanger truth into the following:
-1. Just simply who I am and the pain I've been coz I'm not aware of my bindspots, and make me feel seen..
-2. Worst and best work environment for me..
-3. Worst and best careers for me..
-4. Worst and best teamates for me..
-
-Do not mention about the "cliffhanger truth" or anything like that, just make them feel that way without saying it. Respond in taglish english dominant Gen-Z type. But give them a subtle hint na I can access the full version if and only if I can contact "Joel Dampil Jr.".  Answer in taglish english dominant version na parang professional tropa vibes but not cringe conyo BGC levels.
-"""
 
 # Chapter-specific question generation prompts
 def get_chapter_2_generation_prompt(chapter_1_results):
@@ -178,11 +118,11 @@ Based on the Chapter 1 results: {chapter_1_results}
 
 CHAPTER 2: BEHAVIORAL TRUTH - Situational Decision Making
 
-PURPOSE: After Chapter 1 gives us a baseline of natural tendencies, Chapter 2 reveals how someone actually behaves in real situations. This helps solve contradictions and solidify the strength profile by seeing which traits someone actually uses when he/she has handled or is handling such situations.
+PURPOSE: After Chapter 1 gives us a baseline of natural tendencies, Chapter 2 reveals how someone actually behaves in real situations. This helps solve contradictions and solidify the strength profile by seeing which traits someone actually uses when under pressure.
 
 CRITICAL JSON REQUIREMENTS - READ CAREFULLY:
 1. Return ONLY a valid JSON array - NEVER multiple arrays
-2. NEVER use markdown blocks, NEVER use ```json:disable-run
+2. NEVER use markdown blocks, NEVER use ```json formatting
 3. NEVER add explanatory text before or after the JSON
 4. The response must start with [ and end with ]
 5. All 13 questions must be in ONE SINGLE ARRAY
@@ -199,12 +139,12 @@ CORRECT FORMAT (USE THIS):
 [{{"QuestionID":"Q2-1",...}},{{"QuestionID":"Q2-2",...}},{{"QuestionID":"Q2-3",...}}...{{"QuestionID":"Q2-13",...}}]
 
 QUESTION REQUIREMENTS:
-1. Specific, real-life scenarios experienced by everyone but approached differently
+1. Specific, realistic workplace scenarios
 2. Each choice clearly maps to different trait combinations
-3. NO vague questions that can be easily manipulated, it should be identity's truth extracting type of question
-4. Focus on natural first instincts, not their ideal responses. In short, focus on who they are, not on what they think who they want to become.
-5. Test for false-truths distinctions between similar traits
-6. NO parentheses, or no inclusions of trait names in options
+3. NO vague scenarios that could apply to multiple traits
+4. Focus on natural first instincts, not ideal responses
+5. Test for false-truth distinctions between similar traits
+6. NO parentheses with trait names in options
 7. Keep option text concise and clear
 
 Generate exactly 13 questions in ONE SINGLE JSON ARRAY. Return ONLY the JSON array with no additional text, formatting, or commentary. Start your response with [ and end with ]."""
@@ -218,19 +158,17 @@ Chapter 2: {chapter_2_results}
 
 CHAPTER 3: DEPTH ANALYSIS - Perception & Motivation Patterns
 
-PURPOSE: While Chapter 1 shows subconscious patterns and Chapter 2 shows behavioral responses, Chapter 3 focuses on an in depth questions or context about how they perceive things, may it be a feedback, happiness, stress, or others. The purpose of chapter 3 is to solidify truth based on contradiction between chapter 1 and 2 and to add clarity on it based on their real-life scenarios that will make them think and share themselves.
+PURPOSE: While Chapter 1 shows subconscious patterns and Chapter 2 shows behavioral responses, Chapter 3 explores how someone perceives and processes experiences. This finalizes the strength profile by addressing contradictions between earlier chapters and adding clarity to motivations.
 
 CRITICAL FORMAT REQUIREMENTS:
-1. Generate exactly 7 easy to answer open-ended questions.
+1. Generate exactly 7 open-ended questions
 2. Format as simple Q1:, Q2:, Q3:, etc.
 3. DO NOT use JSON format for Chapter 3
 4. DO NOT include "Prompt": or any JSON syntax
 5. Each question should be a direct, clear question ending with ?
 
-
-
 CORRECT FORMAT:
-Q1: Think of a time when you received a feedback that's hard to take. how did you process it internally - what went through your mind first, how did it affect you, and what did you do with that information?
+Q1: Think of a time when you received difficult feedback. Walk me through how you processed it internally - what went through your mind first, how did it affect you, and what did you do with that information?
 
 Q2: Describe a project or task that completely absorbed you, making time disappear. What specific aspects aligned with your interests and skills?
 
@@ -238,11 +176,8 @@ QUESTION REQUIREMENTS:
 1. Explore HOW someone perceives situations, not just what they do
 2. Test for false-truth distinctions (e.g., Empathy vs Individualization)
 3. Address any contradictions found between Chapter 1 and 2 results
-4. Focus on internal processing patterns, such as but not limited to perceptions, and motivations
+4. Focus on internal processing patterns and motivations
 5. Specific enough to avoid vague responses that don't reveal traits
-6. DO NOT sound like you are interrogating, you may sound like you are a friend that's asking them to tell stories, perceptions, motivations, experiences.
-7. NO vague questions that can be easily manipulated, it should be identity's truth extracting type of question.
-8. DO NOT mention specific gallup Clifton traits being tested in the questions.
 
 AREAS TO EXPLORE:
 - How they process feedback (positive/negative)
@@ -250,10 +185,8 @@ AREAS TO EXPLORE:
 - How they handle stress and pressure
 - What makes them feel most satisfied
 - How they prefer to learn and grow
-- What frustrates them the most
-- How they define success	
-- How they treat a friend
-- How they compare work vs life, are they one? or are they separate?
+- What frustrates them most
+- How they define success
 
 Generate exactly 7 questions using the Q1:, Q2:, Q3: format. No JSON, no "Prompt":, just direct questions."""
 
@@ -283,20 +216,6 @@ def get_all_strengths():
     for domain_strengths in CLIFTON_STRENGTHS.values():
         all_strengths.extend(domain_strengths)
     return all_strengths
-
-def get_workflow_prompts():
-    """Returns all workflow prompts for the assessment process"""
-    return {
-        "pre_analysis_instruction": PRE_ANALYSIS_INSTRUCTION,
-        "chapter_1_completion": CHAPTER_1_COMPLETION_PROMPT,
-        "chapter_1_summary": CHAPTER_1_SUMMARY_PROMPT,
-        "chapter_2_repriming": CHAPTER_2_REPRIMING_PROMPT,
-        "chapter_2_completion": CHAPTER_2_COMPLETION_PROMPT,
-        "chapter_2_summary": CHAPTER_2_SUMMARY_PROMPT,
-        "chapter_3_repriming": CHAPTER_3_REPRIMING_PROMPT,
-        "chapter_3_completion": CHAPTER_3_COMPLETION_PROMPT,
-        "final_cliffhanger": FINAL_CLIFFHANGER_PROMPT
-    }
 
 def validate_strength_profile(strength_list):
     """Validates that a strength profile contains 34 unique strengths"""

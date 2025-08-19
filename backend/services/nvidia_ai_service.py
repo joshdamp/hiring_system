@@ -482,6 +482,39 @@ Analyze the responses carefully to determine which traits are strongest based on
         print("DEBUG: Rankings validation passed")
         return True
 
+    def _fix_invalid_rankings(self, invalid_rankings: Dict[str, int], fallback_rankings: Dict[str, int]) -> Dict[str, int]:
+        """Attempt to fix invalid rankings by filtering and normalizing"""
+        print("DEBUG: Attempting to fix invalid rankings")
+        
+        # Filter to only valid traits
+        valid_rankings = {}
+        for trait, rank in invalid_rankings.items():
+            if trait in self.all_traits:
+                valid_rankings[trait] = rank
+            else:
+                print(f"DEBUG: Removing invalid trait: {trait}")
+        
+        # If we don't have all 34 traits, add missing ones from fallback
+        missing_traits = set(self.all_traits) - set(valid_rankings.keys())
+        if missing_traits:
+            print(f"DEBUG: Adding {len(missing_traits)} missing traits from fallback")
+            for trait in missing_traits:
+                valid_rankings[trait] = fallback_rankings.get(trait, 34)
+        
+        # Normalize rankings to 1-34
+        if len(valid_rankings) == 34:
+            # Sort by current rank and reassign 1-34
+            sorted_traits = sorted(valid_rankings.items(), key=lambda x: x[1])
+            normalized_rankings = {}
+            for i, (trait, _) in enumerate(sorted_traits):
+                normalized_rankings[trait] = i + 1
+            
+            print(f"DEBUG: Normalized rankings for {len(normalized_rankings)} traits")
+            return normalized_rankings
+        
+        print(f"DEBUG: Could not fix rankings, have {len(valid_rankings)} traits instead of 34")
+        return fallback_rankings
+
     async def generate_follow_up_questions(self, user_id: str, trait_rankings: Dict[str, int], 
                                    previous_responses: List[Dict[str, Any]], round_num: int) -> List[Dict[str, Any]]:
         """
@@ -521,10 +554,23 @@ Analyze the responses carefully to determine which traits are strongest based on
         # Add extra instructions to ensure proper JSON format
         enhanced_prompt = f"""{base_prompt}
 
-CRITICAL: Your response must be EXACTLY in this format with no additional text:
-[{{"QuestionID":"Q2-1","Prompt":"Your question here","Type":"multiple_choice","Option1":"Option A","Option2":"Option B","Option3":"Option C","Option4":"Option D"}},{{"QuestionID":"Q2-2","Prompt":"Your question here","Type":"multiple_choice","Option1":"Option A","Option2":"Option B","Option3":"Option C","Option4":"Option D"}},...,{{"QuestionID":"Q2-13","Prompt":"Your question here","Type":"multiple_choice","Option1":"Option A","Option2":"Option B","Option3":"Option C","Option4":"Option D"}}]
+ABSOLUTELY CRITICAL - JSON FORMAT REQUIREMENTS:
+1. Your response must start with [ and end with ]
+2. NO text before the opening [
+3. NO text after the closing ]
+4. NO explanations, NO comments, NO additional text
+5. NO markdown formatting like ```json
+6. Generate ALL 13 questions in ONE SINGLE continuous JSON array
 
-Do not include any text before the [ or after the ]. Return only the JSON array."""
+EXAMPLE OF WHAT NOT TO DO:
+Here are the questions:
+[{{"QuestionID":"Q2-1",...}}]
+This is a good set of questions.
+
+EXAMPLE OF CORRECT FORMAT:
+[{{"QuestionID":"Q2-1","Prompt":"Question text","Type":"multiple_choice","Option1":"A","Option2":"B","Option3":"C","Option4":"D"}},{{"QuestionID":"Q2-2","Prompt":"Question text","Type":"multiple_choice","Option1":"A","Option2":"B","Option3":"C","Option4":"D"}},...,{{"QuestionID":"Q2-13","Prompt":"Question text","Type":"multiple_choice","Option1":"A","Option2":"B","Option3":"C","Option4":"D"}}]
+
+Return ONLY the JSON array. Nothing else."""
         
         messages = [
             {"role": "system", "content": self.system_prompt},
@@ -615,7 +661,7 @@ Do not include any text before the [ or after the ]. Return only the JSON array.
         questions = []
         
         try:
-            # Strategy 1: Direct JSON parsing
+            # First, clean the response
             response_clean = response.strip()
             
             # Remove markdown code blocks if present
@@ -626,63 +672,67 @@ Do not include any text before the [ or after the ]. Return only the JSON array.
             if response_clean.endswith('```'):
                 response_clean = response_clean[:-3].strip()
             
+            # Strategy 1: Extract ONLY the JSON array part
+            start_idx = response_clean.find('[')
+            if start_idx >= 0:
+                # Find the matching closing bracket
+                bracket_count = 0
+                end_idx = -1
+                
+                for i in range(start_idx, len(response_clean)):
+                    if response_clean[i] == '[':
+                        bracket_count += 1
+                    elif response_clean[i] == ']':
+                        bracket_count -= 1
+                        if bracket_count == 0:
+                            end_idx = i + 1
+                            break
+                
+                if end_idx > start_idx:
+                    json_part = response_clean[start_idx:end_idx]
+                    print(f"DEBUG: Extracted JSON array: {json_part[:200]}...")
+                    
+                    try:
+                        raw_questions = json.loads(json_part)
+                        print(f"DEBUG: Extracted JSON parsing successful: {len(raw_questions)} questions")
+                        questions = self._format_chapter_2_questions(raw_questions)
+                        if questions and len(questions) >= 10:  # Require at least 10 questions
+                            return questions
+                        else:
+                            print(f"DEBUG: Only got {len(questions)} questions, need at least 10")
+                            
+                    except json.JSONDecodeError as e2:
+                        print(f"DEBUG: Extracted JSON parsing failed: {e2}")
+                        
+                        # Strategy 2: Fix common JSON issues and try again
+                        fixed_json = self._fix_malformed_json(json_part)
+                        if fixed_json:
+                            try:
+                                raw_questions = json.loads(fixed_json)
+                                print(f"DEBUG: Fixed JSON parsing successful: {len(raw_questions)} questions")
+                                questions = self._format_chapter_2_questions(raw_questions)
+                                if questions and len(questions) >= 10:  # Require at least 10 questions
+                                    return questions
+                                else:
+                                    print(f"DEBUG: Fixed JSON only got {len(questions)} questions, need at least 10")
+                            except json.JSONDecodeError as e3:
+                                print(f"DEBUG: Fixed JSON parsing also failed: {e3}")
+            
+            # Strategy 3: Try direct parsing of the cleaned response (fallback)
             try:
                 raw_questions = json.loads(response_clean)
                 print(f"DEBUG: Direct JSON parsing successful: {len(raw_questions)} questions")
                 questions = self._format_chapter_2_questions(raw_questions)
                 if questions:
                     return questions
-                    
             except json.JSONDecodeError as e:
                 print(f"DEBUG: Direct JSON parsing failed: {e}")
-                
-                # Strategy 2: Extract JSON array from response
-                start_idx = response_clean.find('[')
-                if start_idx >= 0:
-                    # Find the matching closing bracket
-                    bracket_count = 0
-                    end_idx = -1
-                    
-                    for i in range(start_idx, len(response_clean)):
-                        if response_clean[i] == '[':
-                            bracket_count += 1
-                        elif response_clean[i] == ']':
-                            bracket_count -= 1
-                            if bracket_count == 0:
-                                end_idx = i + 1
-                                break
-                    
-                    if end_idx > start_idx:
-                        json_part = response_clean[start_idx:end_idx]
-                        print(f"DEBUG: Extracted JSON array: {json_part[:200]}...")
                         
-                        try:
-                            raw_questions = json.loads(json_part)
-                            print(f"DEBUG: Extracted JSON parsing successful: {len(raw_questions)} questions")
-                            questions = self._format_chapter_2_questions(raw_questions)
-                            if questions:
-                                return questions
-                                
-                        except json.JSONDecodeError as e2:
-                            print(f"DEBUG: Extracted JSON parsing failed: {e2}")
-                            
-                            # Strategy 3: Fix common JSON issues and try again
-                            fixed_json = self._fix_malformed_json(json_part)
-                            if fixed_json:
-                                try:
-                                    raw_questions = json.loads(fixed_json)
-                                    print(f"DEBUG: Fixed JSON parsing successful: {len(raw_questions)} questions")
-                                    questions = self._format_chapter_2_questions(raw_questions)
-                                    if questions:
-                                        return questions
-                                except json.JSONDecodeError as e3:
-                                    print(f"DEBUG: Fixed JSON parsing also failed: {e3}")
-                
-                # Strategy 4: Parse individual question objects from text
-                questions = self._parse_questions_from_text(response_clean)
-                if questions:
-                    print(f"DEBUG: Text parsing successful: {len(questions)} questions")
-                    return questions
+            # Strategy 4: Parse individual question objects from text
+            questions = self._parse_questions_from_text(response_clean)
+            if questions:
+                print(f"DEBUG: Text parsing successful: {len(questions)} questions")
+                return questions
                         
         except Exception as e:
             print(f"DEBUG: JSON parsing failed with exception: {e}")
@@ -1204,12 +1254,23 @@ Do not include any text before the [ or after the ]. Return only the JSON array.
         
         CRITICAL JSON REQUIREMENTS:
         - Return ONLY a valid JSON object with ALL 34 traits ranked 1-34
-        - NO comments, NO explanatory text, NO // or /* */ comments
-        - Use exact trait names: Achiever, Activator, Adaptability, Analytical, Arranger, Belief, Command, Communication, Competition, Connectedness, Consistency, Context, Deliberative, Developer, Discipline, Empathy, Focus, Futuristic, Harmony, Ideation, Includer, Individualization, Input, Intellection, Learner, Maximizer, Positivity, Relator, Responsibility, Restorative, Self-Assurance, Significance, Strategic, Woo
+        - NO comments, NO explanatory text, NO additional words
+        - NO parentheses, NO ** symbols, NO markdown formatting
+        - NO duplicate rankings - each number 1-34 must be used exactly once
+        - DO NOT create new trait names or combine traits (e.g., "LearnerStrategic" is INVALID)
+        - DO NOT modify trait names (e.g., "learner" should be "Learner")
+        - Use EXACTLY these trait names (copy them exactly): Achiever, Activator, Adaptability, Analytical, Arranger, Belief, Command, Communication, Competition, Connectedness, Consistency, Context, Deliberative, Developer, Discipline, Empathy, Focus, Futuristic, Harmony, Ideation, Includer, Individualization, Input, Intellection, Learner, Maximizer, Positivity, Relator, Responsibility, Restorative, Self-Assurance, Significance, Strategic, Woo
         
-        Format: {{"Achiever": 1, "Activator": 2, "Adaptability": 3, ...}}
+        WRONG FORMAT EXAMPLES (DO NOT USE):
+        {{"Significance": 6, "Communication": 5, "Strategic": "Revised from #5 to #4"}}
+        {{"LearnerStrategic": 1, "Achiever": 2}}  <!-- NEVER combine traits
+        {{"learner": 1, "strategic": 2}}  <!-- NEVER use lowercase
+        {{"Achiever": 4, "Activator": 6, "Significance": "6 (tied with Activator)"}}
         
-        Return ONLY the JSON object with no additional text."""
+        CORRECT FORMAT (USE THIS):
+        {{"Achiever": 1, "Activator": 2, "Adaptability": 3, "Analytical": 4, "Arranger": 5, "Belief": 6, "Command": 7, "Communication": 8, "Competition": 9, "Connectedness": 10, "Consistency": 11, "Context": 12, "Deliberative": 13, "Developer": 14, "Discipline": 15, "Empathy": 16, "Focus": 17, "Futuristic": 18, "Harmony": 19, "Ideation": 20, "Includer": 21, "Individualization": 22, "Input": 23, "Intellection": 24, "Learner": 25, "Maximizer": 26, "Positivity": 27, "Relator": 28, "Responsibility": 29, "Restorative": 30, "Self-Assurance": 31, "Significance": 32, "Strategic": 33, "Woo": 34}}
+        
+        Return ONLY the JSON object starting with {{ and ending with }}. No other text."""
         
         messages = [
             {"role": "system", "content": self.system_prompt},
@@ -1224,8 +1285,15 @@ Do not include any text before the [ or after the ]. Return only the JSON array.
                 print(f"DEBUG: Successfully refined rankings with AI analysis")
                 return refined_rankings
             else:
-                print("DEBUG: AI rankings validation failed, returning current rankings")
-                return current_rankings
+                print("DEBUG: AI rankings validation failed, attempting to fix rankings")
+                # Try to fix the rankings if they're close but not perfect
+                fixed_rankings = self._fix_invalid_rankings(refined_rankings, current_rankings)
+                if self._validate_rankings(fixed_rankings):
+                    print("DEBUG: Successfully fixed invalid rankings")
+                    return fixed_rankings
+                else:
+                    print("DEBUG: Could not fix rankings, returning current rankings")
+                    return current_rankings
                 
         except Exception as e:
             print(f"ERROR: Failed to refine rankings with AI: {e}")
@@ -1239,51 +1307,105 @@ Do not include any text before the [ or after the ]. Return only the JSON array.
             
             print(f"DEBUG: Parsing response: {response[:300]}...")
             
+            # Pre-clean the response to remove common issues
+            cleaned_response = response.strip()
+            
+            # Remove any text before the first { and after the last }
+            start_idx = cleaned_response.find('{')
+            end_idx = cleaned_response.rfind('}')
+            
+            if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                cleaned_response = cleaned_response[start_idx:end_idx + 1]
+                print(f"DEBUG: Extracted JSON section: {cleaned_response[:200]}...")
+            
+            # Remove problematic patterns before JSON parsing
+            # Remove markdown formatting
+            cleaned_response = re.sub(r'\*\*[^*]*\*\*', '', cleaned_response)
+            # Remove parenthetical explanations like "(tied with Activator)"
+            cleaned_response = re.sub(r'\([^)]*\)', '', cleaned_response)
+            # Remove explanatory text after values like "-> 5 (swapped with Communication..."
+            cleaned_response = re.sub(r'->.*?(?=[,}])', '', cleaned_response)
+            # Remove any text that looks like revisions: "Revised from #5 to #4"
+            cleaned_response = re.sub(r'"[^"]*(?:Revised|revised|->)[^"]*"', '', cleaned_response)
+            # Clean up any double commas or malformed separators
+            cleaned_response = re.sub(r',\s*,', ',', cleaned_response)
+            # Remove trailing commas before }
+            cleaned_response = re.sub(r',\s*}', '}', cleaned_response)
+            # Clean up whitespace
+            cleaned_response = re.sub(r'\s+', ' ', cleaned_response)
+            
+            print(f"DEBUG: Pre-cleaned response: {cleaned_response[:300]}...")
+            
             # Try direct JSON parsing first
             try:
-                rankings = json.loads(response.strip())
+                rankings = json.loads(cleaned_response)
                 if isinstance(rankings, dict):
                     cleaned_rankings = {}
                     for trait, rank in rankings.items():
-                        try:
-                            cleaned_rankings[trait] = int(rank)
-                        except (ValueError, TypeError):
-                            continue
-                    print(f"DEBUG: Direct JSON parsing successful: {len(cleaned_rankings)} traits")
-                    return cleaned_rankings
-            except json.JSONDecodeError as e:
-                print(f"DEBUG: Direct JSON parsing failed: {e}")
-            
-            # Try to extract JSON from the response
-            json_match = re.search(r'\{.*\}', response, re.DOTALL)
-            if json_match:
-                json_str = json_match.group()
-                print(f"DEBUG: Extracted JSON: {json_str[:200]}...")
-                
-                # Clean common JSON issues including comments
-                json_str = json_str.replace('\n', ' ')  # Remove newlines
-                json_str = re.sub(r'//[^\r\n]*', '', json_str)  # Remove // comments
-                json_str = re.sub(r'/\*.*?\*/', '', json_str, flags=re.DOTALL)  # Remove /* */ comments
-                json_str = re.sub(r',\s*}', '}', json_str)  # Remove trailing commas
-                json_str = re.sub(r',\s*]', ']', json_str)  # Remove trailing commas in arrays
-                json_str = re.sub(r'\s+', ' ', json_str)  # Normalize whitespace
-                
-                print(f"DEBUG: Cleaned JSON (first 200 chars): {json_str[:200]}...")
-                
-                try:
-                    rankings = json.loads(json_str)
-                    if isinstance(rankings, dict):
-                        cleaned_rankings = {}
-                        for trait, rank in rankings.items():
+                        # Only include valid CliftonStrengths traits
+                        if trait in self.all_traits:
                             try:
+                                # Handle both int and string values
+                                if isinstance(rank, str):
+                                    # Extract just the number from strings like "6 (tied with...)"
+                                    rank_match = re.search(r'\d+', rank)
+                                    if rank_match:
+                                        rank = int(rank_match.group())
+                                    else:
+                                        continue
                                 cleaned_rankings[trait] = int(rank)
                             except (ValueError, TypeError):
                                 continue
-                        print(f"DEBUG: Cleaned JSON parsing successful: {len(cleaned_rankings)} traits")
+                        else:
+                            print(f"DEBUG: Skipping invalid trait in direct parsing: {trait}")
+                    
+                    print(f"DEBUG: Direct JSON parsing successful: {len(cleaned_rankings)} traits")
+                    
+                    # If we have exactly 34 valid traits, return them
+                    if len(cleaned_rankings) == 34:
                         return cleaned_rankings
-                except json.JSONDecodeError as e2:
-                    print(f"DEBUG: Cleaned JSON parsing also failed: {e2}")
-                    print(f"DEBUG: Final cleaned JSON: {json_str}")
+                    elif len(cleaned_rankings) > 34:
+                        print(f"DEBUG: Too many traits ({len(cleaned_rankings)}), filtering to top 34")
+                        # Sort by rank and take top 34
+                        sorted_traits = sorted(cleaned_rankings.items(), key=lambda x: x[1])[:34]
+                        return dict(sorted_traits)
+                    else:
+                        print(f"DEBUG: Not enough valid traits ({len(cleaned_rankings)}), continuing to regex parsing")
+                        
+            except json.JSONDecodeError as e:
+                print(f"DEBUG: Direct JSON parsing failed: {e}")
+            
+            # If direct parsing fails, try to reconstruct valid JSON
+            # Extract key-value pairs using regex
+            pattern = r'"([^"]+)":\s*(\d+)'
+            matches = re.findall(pattern, cleaned_response)
+            
+            if matches:
+                reconstructed = {}
+                for trait, rank in matches:
+                    # Only include valid CliftonStrengths traits
+                    if trait in self.all_traits:
+                        try:
+                            reconstructed[trait] = int(rank)
+                        except (ValueError, TypeError):
+                            continue
+                    else:
+                        print(f"DEBUG: Skipping invalid trait: {trait}")
+                
+                if len(reconstructed) > 0:
+                    print(f"DEBUG: Regex parsing successful: {len(reconstructed)} traits")
+                    
+                    # If we have exactly 34 valid traits, return them
+                    if len(reconstructed) == 34:
+                        return reconstructed
+                    elif len(reconstructed) > 34:
+                        print(f"DEBUG: Too many traits ({len(reconstructed)}), filtering to top 34")
+                        # Sort by rank and take top 34
+                        sorted_traits = sorted(reconstructed.items(), key=lambda x: x[1])[:34]
+                        return dict(sorted_traits)
+                    else:
+                        print(f"DEBUG: Not enough valid traits ({len(reconstructed)}), need 34")
+                        return {}
             
             print("DEBUG: No valid JSON found in response")
             return {}

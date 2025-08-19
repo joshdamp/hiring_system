@@ -3,6 +3,7 @@ import math
 from datetime import datetime
 from .sheets_service import SheetsService
 from .nvidia_ai_service import NvidiaAIService
+from .ai_prompts_service import get_all_strengths
 from models.schemas import UserCreate, UserResponse, TraitScore, FinalResults
 
 class AssessmentService:
@@ -234,9 +235,35 @@ class AssessmentService:
             if not trait_rankings:
                 raise Exception("No trait rankings found for user")
             
+            # Validate and clean trait rankings
+            valid_traits = get_all_strengths()  # Get the 34 valid traits
+            cleaned_rankings = {}
+            
+            for trait_name, ranking in trait_rankings.items():
+                if trait_name in valid_traits:
+                    cleaned_rankings[trait_name] = ranking
+                else:
+                    print(f"DEBUG: Skipping invalid trait in final results: {trait_name}")
+            
+            # Ensure we have exactly 34 traits
+            if len(cleaned_rankings) != 34:
+                print(f"DEBUG: Invalid trait count in final results: {len(cleaned_rankings)}, expected 34")
+                # If we don't have exactly 34, we need to fix this
+                missing_traits = set(valid_traits) - set(cleaned_rankings.keys())
+                if missing_traits:
+                    # Add missing traits with default rankings
+                    for i, trait in enumerate(missing_traits):
+                        cleaned_rankings[trait] = 34 - i  # Give them lower rankings
+                
+                # Normalize rankings to ensure they're 1-34
+                sorted_traits = sorted(cleaned_rankings.items(), key=lambda x: x[1])
+                cleaned_rankings = {}
+                for i, (trait, _) in enumerate(sorted_traits):
+                    cleaned_rankings[trait] = i + 1
+            
             # Convert to TraitScore objects
             traits = []
-            for trait_name, ranking in trait_rankings.items():
+            for trait_name, ranking in cleaned_rankings.items():
                 # Calculate score from ranking (higher rank = lower score)
                 score = (35 - ranking) / 34 * 100  # Convert to 0-100 scale
                 traits.append(TraitScore(
