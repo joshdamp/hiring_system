@@ -15,6 +15,7 @@ from .ai_prompts_service import (
     CLIFTON_STRENGTHS,
     get_all_strengths,
     validate_strength_profile,
+    get_trait_behavioral_patterns,
     PRIMING_1_IDENTITY,
     PRIMING_2_METHODOLOGY,
     PRIMING_3_OVERVIEW
@@ -208,28 +209,61 @@ class NvidiaAIService:
         return json_str
 
     def _get_fallback_rankings(self) -> Dict[str, int]:
-        """Generate fallback rankings using enhanced randomization"""
+        """Generate fallback rankings using enhanced randomization with realistic patterns"""
         print("DEBUG: Using fallback rankings due to AI analysis failure")
         
-        # Create groups of traits for more realistic distribution
-        strategic_thinking = ['Analytical', 'Context', 'Futuristic', 'Ideation', 'Input', 'Intellection', 'Learner', 'Strategic']
-        executing = ['Achiever', 'Arranger', 'Belief', 'Consistency', 'Deliberative', 'Discipline', 'Focus', 'Responsibility', 'Restorative']
-        influencing = ['Activator', 'Command', 'Communication', 'Competition', 'Maximizer', 'Self-Assurance', 'Significance', 'Woo']
-        relationship_building = ['Adaptability', 'Connectedness', 'Developer', 'Empathy', 'Harmony', 'Includer', 'Individualization', 'Positivity', 'Relator']
+        # Create more realistic fallback by simulating natural talent distribution
+        # Most people have 2-3 dominant domains with varied strengths within
         
-        # Shuffle each group and assign rankings
-        all_groups = [strategic_thinking, executing, influencing, relationship_building]
-        random.shuffle(all_groups)
+        all_traits = list(self.all_traits)
+        random.shuffle(all_traits)
+        
+        # Create a more natural distribution
+        # Top tier (1-8): Usually shows clear strengths
+        # Mid-high (9-16): Developing strengths  
+        # Mid-low (17-26): Context-dependent strengths
+        # Lower (27-34): Less natural strengths
         
         rankings = {}
-        rank = 1
         
-        for group in all_groups:
-            shuffled_group = group.copy()
-            random.shuffle(shuffled_group)
-            for trait in shuffled_group:
-                rankings[trait] = rank
-                rank += 1
+        # Randomly select dominant domains (1-2 domains typically stronger)
+        domains = {
+            "Strategic": ["Analytical", "Context", "Futuristic", "Ideation", "Input", "Intellection", "Learner", "Strategic"],
+            "Executing": ["Achiever", "Arranger", "Belief", "Consistency", "Deliberative", "Discipline", "Focus", "Responsibility", "Restorative"],
+            "Influencing": ["Activator", "Command", "Communication", "Competition", "Maximizer", "Self-Assurance", "Significance", "Woo"],
+            "Relationship": ["Adaptability", "Connectedness", "Developer", "Empathy", "Harmony", "Includer", "Individualization", "Positivity", "Relator"]
+        }
+        
+        domain_names = list(domains.keys())
+        random.shuffle(domain_names)
+        
+        # Assign roughly 60% of top 10 from first two domains, 40% from others
+        rank = 1
+        traits_assigned = set()
+        
+        # Assign from first domain (strongest)
+        primary_domain = domains[domain_names[0]]
+        random.shuffle(primary_domain)
+        for i, trait in enumerate(primary_domain[:4]):  # Take 4 from primary
+            rankings[trait] = rank
+            traits_assigned.add(trait)
+            rank += 1
+        
+        # Assign from secondary domain
+        secondary_domain = domains[domain_names[1]]
+        random.shuffle(secondary_domain)
+        for i, trait in enumerate(secondary_domain[:3]):  # Take 3 from secondary
+            rankings[trait] = rank
+            traits_assigned.add(trait)
+            rank += 1
+        
+        # Fill remaining with mixed from all domains
+        remaining_traits = [t for t in all_traits if t not in traits_assigned]
+        random.shuffle(remaining_traits)
+        
+        for trait in remaining_traits:
+            rankings[trait] = rank
+            rank += 1
         
         return rankings
 
@@ -247,7 +281,12 @@ class NvidiaAIService:
         for resp in responses:
             response_data.append(f"Q{resp.get('questionId', 'Unknown')}: {resp.get('response', 'No response')}")
         
-        # Enhanced prompt for better trait analysis
+        # Enhanced prompt for better trait analysis with behavioral patterns
+        behavioral_patterns = get_trait_behavioral_patterns()
+        key_indicators = []
+        for trait, patterns in behavioral_patterns.items():
+            key_indicators.append(f"- {trait}: {patterns[0]}")  # Use first key pattern
+        
         analysis_prompt = f"""
 {PRIMING_1_IDENTITY}
 
@@ -258,21 +297,40 @@ Based on these user responses to assessment questions, analyze and rank the 34 C
 User Responses:
 {chr(10).join(response_data)}
 
-CRITICAL REQUIREMENTS:
-1. Analyze the CONTENT and MEANING of each response
-2. Look for patterns, preferences, and behavioral indicators
-3. Rank traits based on psychological insights from responses
-4. DO NOT use alphabetical ordering
-5. Consider emotional intelligence, work style, and decision-making patterns
-6. Give higher rankings to traits that match the user's expressed preferences and behaviors
+BEHAVIORAL PATTERN MATCHING:
+Look for these key behavioral indicators in the responses:
+{chr(10).join(key_indicators)}
+
+ANALYSIS REQUIREMENTS:
+1. EVIDENCE-BASED RANKING: Each ranking must be supported by specific patterns in the responses
+2. BEHAVIORAL FOCUS: Analyze what the person actually does/prefers, not what they think they should do
+3. PATTERN RECOGNITION: Look for consistent themes across multiple responses
+4. TRAIT DIFFERENTIATION: Carefully distinguish between similar traits using behavioral evidence
+5. INTENSITY WEIGHTING: Strong preferences (selecting extreme ends) indicate stronger traits
+6. DOMAIN BALANCE: Ensure rankings reflect natural distribution unless responses clearly indicate concentration
+
+SPECIFIC ANALYSIS STEPS:
+1. Identify the 5-7 strongest behavioral patterns from responses
+2. Map these patterns to specific CliftonStrengths traits using the behavioral indicators
+3. Look for evidence of commonly misidentified traits (Command, Competition, Futuristic, Self-Assurance)
+4. Verify trait combinations make psychological sense together
+5. Ensure bottom-ranked traits show clear absence of related behaviors
+
+CRITICAL DIFFERENTIATION FOCUS:
+- Leadership behaviors → Command (authority comfort), Self-Assurance (inner confidence), Significance (impact seeking)
+- Competition-focused responses → Competition (comparison with others) vs Achiever (personal productivity)
+- Future-oriented thinking → Futuristic (vision excitement) vs Strategic (systematic planning)
+- Authority comfort → Command (taking charge) vs Responsibility (duty/ownership)
+- Recognition-seeking → Significance (meaningful impact) vs Achiever (personal accomplishment)
 
 CliftonStrengths Traits to Rank:
 {', '.join(self.all_traits)}
 
-IMPORTANT: Return ONLY a valid JSON object. No explanations, no markdown, no extra text.
+CRITICAL: Return ONLY a valid JSON object with evidence-based rankings.
+
 Format: {{"TraitName": ranking_number, ...}}
 
-Example: {{"Achiever": 1, "Strategic": 2, "Empathy": 3, ...}}
+Example: {{"Achiever": 1, "Strategic": 2, "Command": 3, ...}}
 """
         
         messages = [
@@ -338,6 +396,11 @@ Example: {{"Achiever": 1, "Strategic": 2, "Empathy": 3, ...}}
                     response_text += f"Response: {answer} (1=Strongly Left, 5=Strongly Right)\n\n"
             
             # Enhanced AI analysis prompt with priming
+            behavioral_patterns = get_trait_behavioral_patterns()
+            key_patterns = []
+            for trait, patterns in behavioral_patterns.items():
+                key_patterns.append(f"{trait}: {'; '.join(patterns[:3])}")  # Top 3 patterns
+            
             analysis_prompt = f"""
 {PRIMING_1_IDENTITY}
 
@@ -347,12 +410,41 @@ Now analyze these Chapter 1 responses and provide the 34 Gallup Clifton Strength
 
 {response_text}
 
+DETAILED ANALYSIS REQUIREMENTS:
+1. RESPONSE PATTERN ANALYSIS: Examine the specific choices made for each question
+2. STRENGTH IDENTIFICATION: Look for clear behavioral indicators of each trait
+3. TRAIT DIFFERENTIATION: Apply the critical differentiation rules for commonly confused traits
+4. EVIDENCE VALIDATION: Ensure top-ranked traits have multiple supporting responses
+5. PSYCHOLOGICAL COHERENCE: Verify trait combinations make sense together
+
+KEY BEHAVIORAL INDICATORS TO IDENTIFY:
+{chr(10).join(key_patterns)}
+
+SPECIFIC ANALYSIS METHODOLOGY:
+1. For each response, identify which traits are most strongly indicated by the behavioral choice
+2. Weight extreme responses (1-2 or 4-5) more heavily than moderate responses (3)
+3. Look for consistency patterns across multiple responses that indicate natural behavioral preferences
+4. Consider the psychological profile emerging from the complete set of responses
+5. Rank traits based on strength of behavioral evidence, not assumptions or generalizations
+
+CRITICAL TRAIT DIFFERENTIATION FOCUS:
+- Command behaviors (taking charge, authority comfort) vs Significance (impact seeking)
+- Competition patterns (comparison, winning) vs Achiever (personal productivity)
+- Futuristic thinking (future vision) vs Strategic (systematic planning)
+- Self-Assurance (internal confidence) vs Command (external authority)
+
+RANKING VALIDATION:
+- Top 5 traits should have clear, strong behavioral evidence
+- Traits 6-15 should have moderate supporting evidence
+- Traits 16-25 should show situational or developing patterns
+- Traits 26-34 should show minimal evidence or contrary patterns
+
 CRITICAL: Return ONLY a valid JSON object with ALL 34 traits ranked from 1-34 (1=strongest). 
 Use the exact trait names: Achiever, Activator, Adaptability, Analytical, Arranger, Belief, Command, Communication, Competition, Connectedness, Consistency, Context, Deliberative, Developer, Discipline, Empathy, Focus, Futuristic, Harmony, Ideation, Includer, Individualization, Input, Intellection, Learner, Maximizer, Positivity, Relator, Responsibility, Restorative, Self-Assurance, Significance, Strategic, Woo.
 
 Format: {{"Achiever": 1, "Activator": 2, ...}}
 
-Analyze the responses carefully to determine which traits are strongest based on the user's choices.
+Analyze each response carefully and rank traits based on the behavioral evidence present in the user's actual choices and preferences.
 """
             
             messages = [
@@ -428,34 +520,67 @@ Analyze the responses carefully to determine which traits are strongest based on
             print(f"DEBUG: Invalid rank values. Expected 1-34, got: {sorted(actual_ranks)}")
             return False
         
-        # Enhanced check for sequential/alphabetical patterns
+        # Enhanced validation checks for quality rankings
         trait_names = list(rankings.keys())
         sorted_by_rank = sorted(trait_names, key=lambda x: rankings[x])
         
-        # Check if rankings are too sequential (alphabetical)
-        unique_ranks = len(set(rank_values))
-        print(f"DEBUG: Found {unique_ranks} unique ranking values out of {len(rank_values)} total")
-        
         # Check for alphabetical ordering pattern
         is_alphabetical = sorted_by_rank == sorted(trait_names)
+        if is_alphabetical:
+            print("DEBUG: Rankings appear to be alphabetical - invalid")
+            return False
         
-        # Check for too many sequential ranks (indicating poor analysis)
+        # Check for too many sequential patterns by first letter
         sequential_count = 0
         for i in range(len(sorted_by_rank) - 1):
             current_trait = sorted_by_rank[i]
             next_trait = sorted_by_rank[i + 1]
-            if ord(current_trait[0]) + 1 == ord(next_trait[0]):  # Sequential first letters
+            if ord(current_trait[0]) + 1 == ord(next_trait[0]):
                 sequential_count += 1
         
-        is_sequential_pattern = sequential_count > 15  # More than half are sequential
-        
-        print(f"DEBUG: Is sequential pattern: {is_sequential_pattern}")
-        
-        if is_alphabetical or is_sequential_pattern:
-            print("DEBUG: AI rankings look sequential/invalid, using fallback")
+        is_sequential_pattern = sequential_count > 15
+        if is_sequential_pattern:
+            print("DEBUG: Too many sequential patterns detected - invalid")
             return False
         
-        print("DEBUG: AI rankings passed validation")
+        # Check for domain distribution quality
+        domains = {
+            "Strategic": ["Analytical", "Context", "Futuristic", "Ideation", "Input", "Intellection", "Learner", "Strategic"],
+            "Executing": ["Achiever", "Arranger", "Belief", "Consistency", "Deliberative", "Discipline", "Focus", "Responsibility", "Restorative"],
+            "Influencing": ["Activator", "Command", "Communication", "Competition", "Maximizer", "Self-Assurance", "Significance", "Woo"],
+            "Relationship": ["Adaptability", "Connectedness", "Developer", "Empathy", "Harmony", "Includer", "Individualization", "Positivity", "Relator"]
+        }
+        
+        # Check if all top 10 are from one domain (unrealistic)
+        top_10_traits = [trait for trait, rank in rankings.items() if rank <= 10]
+        for domain, domain_traits in domains.items():
+            domain_count_in_top_10 = len([t for t in top_10_traits if t in domain_traits])
+            if domain_count_in_top_10 >= 8:  # 8+ from same domain in top 10 is suspicious
+                print(f"DEBUG: Too many traits from {domain} domain in top 10 - potentially invalid")
+                return False
+        
+        # Check for commonly misidentified traits being properly differentiated
+        # These should not all be ranked similarly if properly analyzed
+        leadership_traits = ["Command", "Self-Assurance", "Significance"]
+        leadership_ranks = [rankings[trait] for trait in leadership_traits]
+        if max(leadership_ranks) - min(leadership_ranks) < 5:  # All within 5 ranks
+            print("DEBUG: Leadership traits too clustered - may indicate poor differentiation")
+            # Don't reject, but note this
+        
+        # Check for extreme clustering (too many consecutive ranks)
+        rank_gaps = []
+        sorted_ranks = sorted(rank_values)
+        for i in range(len(sorted_ranks) - 1):
+            gap = sorted_ranks[i + 1] - sorted_ranks[i]
+            rank_gaps.append(gap)
+        
+        # If more than 80% of gaps are exactly 1, it might be artificial
+        single_gaps = sum(1 for gap in rank_gaps if gap == 1)
+        if single_gaps > len(rank_gaps) * 0.9:
+            print("DEBUG: Rankings too uniformly distributed - potentially artificial")
+            return False
+        
+        print("DEBUG: AI rankings passed enhanced validation")
         return True
 
     def _validate_rankings(self, rankings: Dict[str, int]) -> bool:
